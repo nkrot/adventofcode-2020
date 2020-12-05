@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 
+# # #
+#
+#
+
+import os
 import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+from aoc import utils
 
 DEBUG = False
 
@@ -24,14 +32,6 @@ def seat_id(code):
     row = decode(code[0:7], 0, 127, "ROW")
     col = decode(code[7:],  0,   7, "COL")
     return int(row * 8 + col)
-
-
-def load_file(fname):
-    lines = []
-    with open(fname) as fd:
-        for line in fd:
-            lines.append(line.strip())
-    return lines
 
 
 def solve_p1(boarding_passes):
@@ -73,7 +73,7 @@ tests = [
 
 
 def run_tests():
-    print("--- Test ---")
+    print("--- Tests ---")
     for tid,(inp,exp1,exp2) in enumerate(tests):
         res1 = seat_id(inp)
         print("T1.{}: {} {} {}".format(tid, res1 == exp1, exp1, res1))
@@ -81,7 +81,7 @@ def run_tests():
 
 def run_real():
     print("--- Day 5 p.1 ---")
-    lines = load_file("input.txt")
+    lines = utils.load_input() #"input.txt")
     exp1 = 901
     res1 = solve_p1(lines)
     print("D1.1: {} {} {}".format(res1 == exp1, exp1, res1))
