@@ -4,10 +4,14 @@
 #
 #
 
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from aoc import utils
 import re
 from typing import List, Callable, Tuple
 
-debug = False
+DEBUG = False
 
 
 def parse_line(line: str) -> Tuple[int, int, str, str]:
@@ -15,7 +19,7 @@ def parse_line(line: str) -> Tuple[int, int, str, str]:
     mn, mx, char, password = m.groups()
     mn, mx = int(mn), int(mx)
     res = (mn, mx, char, password)
-    if debug:
+    if DEBUG:
         print("PARSED:", res)
     return res
 
@@ -49,31 +53,28 @@ tests = [
 
 
 def run_tests():
-    for lines, exp1, exp2 in tests:
-        res = solve(lines, is_valid_p1)
-        print(res == exp1)
+    print("--- Tests ---")
 
-        res = solve(lines, is_valid_p2)
-        print(res == exp2)
+    for tid,(lines, exp1, exp2) in enumerate(tests):
+        res1 = solve(lines, is_valid_p1)
+        print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
-
-def load_input() -> List[str]:
-    lines = []
-    with open('input.txt') as fd:
-        for line in fd:
-            lines.append(line.strip())
-    return lines
+        res2 = solve(lines, is_valid_p2)
+        print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
 def run_real():
-    lines = load_input()
-    print('--- p.1 ---')
-    res = solve(lines, is_valid_p1)
-    print(res)
+    lines = utils.load_input()
 
-    print('--- p.2 ---')
-    res = solve(lines, is_valid_p2)
-    print(res)
+    print("--- Day 2 p.1 ---")
+    exp1 = 542
+    res1 = solve(lines, is_valid_p1)
+    print(exp1 == res1, exp1, res1)
+
+    print("--- Day 2 p.2 ---")
+    exp2 = 360
+    res2 = solve(lines, is_valid_p2)
+    print(exp2 == res2, exp2, res2)
 
 
 if __name__ == '__main__':
