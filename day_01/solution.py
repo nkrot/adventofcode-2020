@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from aoc import utils
 from typing import List
 
+
 def solve_p1(numbers: List[int], target: int):
-    """find two numbers that sum to given number.
+    """Find two numbers that sum to given number.
     Return their product."""
     numbers = sorted(numbers)
     #print(numbers)
@@ -43,34 +48,32 @@ tests = [
 ]
 
 
-def load_input():
-    numbers = []
-    with open("input.txt") as fd:
-        for line in fd:
-            numbers.append(int(line.strip()))
-    return numbers
-
-
 def run_tests():
-    for inputs,exp1,exp2 in tests:
+    print("--- Tests ---")
+
+    for tid,(inputs,exp1,exp2) in enumerate(tests):
         res1 = solve_p1(inputs, 2020)
-        print(res1 == exp1)
+        print(f"T1.{tid}", res1 == exp1, exp1, res1)
+
         res2 = solve_p2(inputs, 2020)
-        print(res2 == exp2)
+        print(f"T2.{tid}", res2 == exp2, exp2, res2)
 
 
 def run_real():
-    inputs = load_input()
+    inputs = [int(ln) for ln in utils.load_input()]
+
     print("--- Task 1 p.1 ---")
-    res = solve_p1(inputs, 2020)
-    print(res)
+    exp1 = 539851
+    res1 = solve_p1(inputs, 2020)
+    print(res1 == exp1, exp1, res1)
 
     print("--- Task 1 p.2 ---")
-    res = solve_p2(inputs, 2020)
-    print(res)
+    exp2 = 212481360
+    res2 = solve_p2(inputs, 2020)
+    print(res2 == exp2, exp2, res2)
 
 
 if __name__ == '__main__':
-    #run_tests()
+    run_tests()
     run_real()
 
