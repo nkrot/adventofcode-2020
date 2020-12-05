@@ -6,19 +6,21 @@
 
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
 
+
 DEBUG = False
+
 
 def decode(code: str, mn: int, mx: int, msg: str = ''):
     if DEBUG:
         print(f"{msg}:", code, mn, mx)
     for ch in code:
-        if ch in {'F','L'}:
+        if ch in {'F', 'L'}:
             mx -= (mx-mn+1)/2
-        elif ch in {'B','R'}:
+        elif ch in {'B', 'R'}:
             mn += (mx-mn+1)/2
         else:
             raise ValueError("Wrong")
@@ -64,32 +66,33 @@ def solve_p2(boarding_passes):
 
 tests = [
     ('FBFBBFFRLR',  357, -1),
-    ('BFFFBBFRRR',  567, -1), # row 70, column 7, seat ID 567.
-    ('FFFBBBFRRR',  119, -1), # row 14, column 7, seat ID 119.
-    ('BBFFBBFRLL',  820, -1), # row 102, column 4, seat ID 820.
-    ('FFFFFFFLLL',    0, -1), # minimal seat id
-    ('BBBBBBBRRR', 1023, -1), # max seat id
+    ('BFFFBBFRRR',  567, -1),  # row 70, column 7, seat ID 567.
+    ('FFFBBBFRRR',  119, -1),  # row 14, column 7, seat ID 119.
+    ('BBFFBBFRLL',  820, -1),  # row 102, column 4, seat ID 820.
+    ('FFFFFFFLLL',    0, -1),  # minimal seat id
+    ('BBBBBBBRRR', 1023, -1),  # max seat id
 ]
 
 
 def run_tests():
     print("--- Tests ---")
-    for tid,(inp,exp1,exp2) in enumerate(tests):
+    for tid, (inp, exp1, exp2) in enumerate(tests):
         res1 = seat_id(inp)
         print("T1.{}: {} {} {}".format(tid, res1 == exp1, exp1, res1))
 
 
 def run_real():
+    lines = utils.load_input()  # loads ./input.txt
+
     print("--- Day 5 p.1 ---")
-    lines = utils.load_input() #"input.txt")
     exp1 = 901
     res1 = solve_p1(lines)
-    print("D1.1: {} {} {}".format(res1 == exp1, exp1, res1))
+    print("D.1: {} {} {}".format(res1 == exp1, exp1, res1))
 
     print("--- Day 5 p.2 ---")
     exp2 = 661
     res2 = solve_p2(lines)
-    print("D1.2: {} {} {}".format(res2 == exp2, exp2, res2))
+    print("D.2: {} {} {}".format(res2 == exp2, exp2, res2))
 
 
 def main():
