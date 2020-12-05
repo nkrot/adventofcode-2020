@@ -6,10 +6,11 @@
 
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from aoc import utils
 import re
 from typing import List, Callable, Tuple
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from aoc import utils
 
 DEBUG = False
 

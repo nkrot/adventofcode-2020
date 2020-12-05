@@ -2,9 +2,10 @@
 
 import os
 import sys
+from typing import List
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
-from typing import List
 
 
 def solve_p1(numbers: List[int], target: int):
@@ -53,10 +54,10 @@ def run_tests():
 
     for tid,(inputs,exp1,exp2) in enumerate(tests):
         res1 = solve_p1(inputs, 2020)
-        print(f"T1.{tid}", res1 == exp1, exp1, res1)
+        print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
         res2 = solve_p2(inputs, 2020)
-        print(f"T2.{tid}", res2 == exp2, exp2, res2)
+        print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
 def run_real():
