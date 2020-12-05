@@ -6,8 +6,14 @@
 # 1) there is no need to store the whole board. only squares with Trees
 #    can be stored.
 
+import os
+import sys
 from typing import Optional, Tuple, Union
 
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from aoc import utils
+
+DEBUG = False
 
 class Board(object):
 
@@ -104,7 +110,7 @@ class Slope(object):
 
 
 def solve_p1(text: Union[str, Board],
-            slope: Optional[Slope] = Slope.default()) -> int:
+             slope: Optional[Slope] = Slope.default()) -> int:
     board = text
     if isinstance(text, str):
         board = Board.from_text(text)
@@ -165,15 +171,14 @@ tests = [
 
 
 def run_tests():
-    for inp,exp1,exp2 in tests:
+    print("--- Tests ---")
 
-        print("--- Test, p.1 --- ")
-        res = solve_p1(inp)
-        print(res == exp1, exp1, res)
+    for tid,(inp,exp1,exp2) in enumerate(tests):
+        res1 = solve_p1(inp)
+        print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
-        print("--- Test, p.2 --- ")
-        res = solve_p2(inp)
-        print(res == exp2, exp2, res)
+        res2 = solve_p2(inp)
+        print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
 def run_real():
@@ -181,17 +186,16 @@ def run_real():
 
     print("--- Task 3 p.1 ---")
     exp1 = 176
-    res = solve_p1(board)
-    print(res == exp1, exp1, res)
+    res1 = solve_p1(board)
+    print(res1 == exp1, exp1, res1)
 
     print("--- Task 3 p.2 ---")
     exp2 = 5872458240
-    res = solve_p2(board)
-    print(res == exp2, exp2, res)
+    res2 = solve_p2(board)
+    print(res2 == exp2, exp2, res2)
 
 
 if __name__ == '__main__':
-    DEBUG = False
     run_tests()
     run_real()
 
