@@ -7,7 +7,7 @@
 import os
 import sys
 from typing import List, Union
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -16,22 +16,10 @@ from aoc import utils
 DEBUG = False
 
 
-def group_lines(data: Union[str,List[str]]) -> List[List[str]]:
-    groups = [[]]
-    if isinstance(data, str):
-        data = [ln.strip() for ln in data.split('\n')]
-    for ln in data:
-        if ln:
-            groups[-1].append(ln)
-        else:
-            groups.append([])
-    return groups
-
-
 def solve_p1(data: Union[str,List[str]]) -> int:
     """Solution to the 1st part of the challenge"""
     cnt = 0
-    groups = group_lines(data)
+    groups = utils.group_lines(data)
     if DEBUG:
         print(groups)
     for grp in groups:
@@ -44,20 +32,17 @@ def solve_p1(data: Union[str,List[str]]) -> int:
     return cnt
 
 
-def solve_p2(data):
+def solve_p2(data: Union[str,List[str]]) -> int:
     """Solution to the 2nd part of the challenge"""
     cnt = 0
-    groups = group_lines(data)
+    groups = utils.group_lines(data)
     if DEBUG:
         print(groups)
     for grp in groups:
-        counts = defaultdict(int)
-        for line in grp:
-            for char in line:
-                counts[char] += 1
+        counts = Counter("".join(grp))
         if DEBUG:
             print(counts)
-        for k, v in counts.items():
+        for v in counts.values():
             if v == len(grp):
                 cnt += 1
     return cnt
