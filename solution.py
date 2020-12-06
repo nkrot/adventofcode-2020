@@ -17,13 +17,13 @@ from aoc import utils
 DEBUG = False
 
 
-def solve_p1():
+def solve_p1(data):
     """Solution to the 1st part of the challenge"""
     # TODO
     pass
 
 
-def solve_p2():
+def solve_p2(data):
     """Solution to the 2nd part of the challenge"""
     # TODO
     pass
