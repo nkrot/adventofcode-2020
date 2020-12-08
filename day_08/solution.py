@@ -7,6 +7,7 @@
 import os
 import sys
 from typing import List, Tuple
+from copy import copy
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -17,7 +18,7 @@ DEBUG = False
 
 class Command(object):
 
-    NAMES = ['nop', 'jmp', 'acc']
+    NAMES = {'nop', 'jmp', 'acc'}
 
     @classmethod
     def from_lines(cls, lines: List[str]) -> List['Command']:
@@ -39,11 +40,18 @@ class Command(object):
         self.times = 0  # number of envocations of this command
         self.debug = DEBUG
 
-    def copy(self):
+    def __copy__(self):
         """make a copy of self, resetting some fields"""
         return self.__class__(self.name, self.argument)
 
-    def __call__(self, argument: int, address: int):
+    def __call__(self, argument: int, address: int) -> Tuple[int, int]:
+        """Execute current command with given argument and start address.
+        Return
+        ------
+        A tuple of two values:
+          1) new value of the argument
+          2) address of the next command to execute
+        """
         self.times += 1
         if self.name == 'acc':
             argument += self.argument
@@ -77,22 +85,28 @@ def solve_p1(commands: List[Command]) -> Tuple[int, int]:
 def solve_p2(commands: List[Command]) -> int:
     """Solution to the 2nd part of the challenge"""
     res = None
-    # indices of potentially broken commands
-    cmd_idxs = [idx for idx, cmd in enumerate(commands)
-                if cmd.name in {'nop', 'jmp'}]
-    for cmd_idx in cmd_idxs:
-        if DEBUG:
-            print(f"--- fixing command at #{cmd_idx} --")
-        fixed_commands = [cmd.copy() for cmd in commands]
-        cmd = fixed_commands[cmd_idx]
+
+    def fix(cmd: Command):
+        """Fix given command in place"""
         if cmd.name == 'jmp':
             cmd.name = 'nop'
         elif cmd.name == 'nop':
             cmd.name = 'jmp'
+
+    # indices of potentially corrupted commands
+    cmd_idxs = [idx for idx, cmd in enumerate(commands)
+                if cmd.name in {'nop', 'jmp'}]
+
+    for cmd_idx in cmd_idxs:
+        if DEBUG:
+            print(f"--- fixing command at #{cmd_idx} --")
+        fixed_commands = [copy(cmd) for cmd in commands]
+        fix(fixed_commands[cmd_idx])
         val, ecode = solve_p1(fixed_commands)
         if ecode == 0:
             res = val
             break
+
     return res
 
 
