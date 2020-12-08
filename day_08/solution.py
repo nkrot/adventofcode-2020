@@ -6,7 +6,7 @@
 
 import os
 import sys
-from typing import List
+from typing import List, Tuple
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -20,7 +20,13 @@ class Command(object):
     NAMES = ['nop', 'jmp', 'acc']
 
     @classmethod
-    def from_text(cls, text: str):
+    def from_lines(cls, lines: List[str]) -> List['Command']:
+        lines = [line.strip() for line in lines if line]
+        commands = [cls.from_line(line) for line in lines]
+        return commands
+
+    @classmethod
+    def from_line(cls, text: str):
         fields = text.strip().split()
         assert len(fields) == 2, f"Wrong format: {text}"
         obj = cls(fields[0], int(fields[1]))
@@ -32,6 +38,10 @@ class Command(object):
         self.argument = arg
         self.times = 0  # number of envocations of this command
         self.debug = DEBUG
+
+    def copy(self):
+        """make a copy of self, resetting some fields"""
+        return self.__class__(self.name, self.argument)
 
     def __call__(self, argument: int, address: int):
         self.times += 1
@@ -50,26 +60,40 @@ class Command(object):
         return "{}".format((self.name, self.argument, self.times))
 
 
-def solve_p1(data: List[str]):
+def solve_p1(commands: List[Command]) -> Tuple[int, int]:
     """Solution to the 1st part of the challenge"""
-    res, accum = 0, 0
-    commands = [Command.from_text(line.strip()) for line in data if line]
-    if DEBUG:
-        print(commands)
-    addr = 0
-    while True:
+    res, ecode = 0, 0
+    accum, addr = 0, 0
+    while addr < len(commands):
         cmd = commands[addr]
         accum, addr = cmd(accum, addr)
         if cmd.times > 1:
+            ecode = 1
             break
         res = accum
-    return res
+    return res, ecode
 
 
-def solve_p2(data):
+def solve_p2(commands: List[Command]) -> int:
     """Solution to the 2nd part of the challenge"""
-    # TODO
-    pass
+    res = None
+    # indices of potentially broken commands
+    cmd_idxs = [idx for idx, cmd in enumerate(commands)
+                if cmd.name in {'nop', 'jmp'}]
+    for cmd_idx in cmd_idxs:
+        if DEBUG:
+            print(f"--- fixing command at #{cmd_idx} --")
+        fixed_commands = [cmd.copy() for cmd in commands]
+        cmd = fixed_commands[cmd_idx]
+        if cmd.name == 'jmp':
+            cmd.name = 'nop'
+        elif cmd.name == 'nop':
+            cmd.name = 'jmp'
+        val, ecode = solve_p1(fixed_commands)
+        if ecode == 0:
+            res = val
+            break
+    return res
 
 
 text1 = \
@@ -85,7 +109,7 @@ acc +6"""
 
 
 tests = [
-    (text1.split('\n'), 5, -1),
+    (text1.split('\n'), 5, 8),
 ]
 
 
@@ -93,11 +117,11 @@ def run_tests():
     print("--- Tests ---")
 
     for tid, (inp, exp1, exp2) in enumerate(tests):
-        res1 = solve_p1(inp)
+        res1 = solve_p1(Command.from_lines(inp))[0]
         print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
-        # res2 = solve_p2(inp)
-        # print(f"T2.{tid}:", res2 == exp2, exp2, res2)
+        res2 = solve_p2(Command.from_lines(inp))
+        print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
 def run_real():
@@ -106,13 +130,13 @@ def run_real():
 
     print(f"--- Day {day} p.1 ---")
     exp1 = 2014
-    res1 = solve_p1(lines)
-    print(exp1 == res1, exp1, res1)
+    res1 = solve_p1(Command.from_lines(lines))
+    print(exp1 == res1[0], exp1, res1)
 
-    # print(f"--- Day {day} p.2 ---")
-    # exp2 = 360
-    # res2 = solve_p2(lines)
-    # print(exp2 == res2, exp2, res2)
+    print(f"--- Day {day} p.2 ---")
+    exp2 = 2251
+    res2 = solve_p2(Command.from_lines(lines))
+    print(exp2 == res2, exp2, res2)
 
 
 if __name__ == '__main__':
