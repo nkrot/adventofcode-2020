@@ -19,7 +19,8 @@ def to_numbers(lines: List[str]) -> List[int]:
     return [int(line) for line in lines]
 
 
-def sum_of_two(target: int, numbers: List[int], sidx, eidx):
+def sum_of_two(target: int,
+               numbers: List[int], sidx, eidx) -> Optional[Tuple[int, int]]:
     for i in range(sidx, eidx):
         for j in range(i+1, eidx):
             if numbers[i] + numbers[j] == target:
@@ -85,8 +86,6 @@ def solve_p2(numbers: List[str], preamble_length: int = 25) -> Optional[int]:
     return sum(utils.minmax(seq))
 
 
-
-
 text_1 = """35
 20
 15
@@ -107,6 +106,7 @@ text_1 = """35
 277
 309
 576"""
+
 
 tests = [
     (text_1.split('\n'), 127, 15+47),
