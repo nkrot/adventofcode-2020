@@ -1,5 +1,5 @@
 
-from typing import List, Union
+from typing import List, Union, Tuple
 
 
 def load_input(fname: str = 'input.txt') -> List[str]:
@@ -12,8 +12,7 @@ def load_input(fname: str = 'input.txt') -> List[str]:
     return lines
 
 
-
-def group_lines(data: Union[str,List[str]]) -> List[List[str]]:
+def group_lines(data: Union[str, List[str]]) -> List[List[str]]:
     """Make groups of lines: a group is a sequence of lines that are separated
     by an empty line from another group.
     Input <data> is either of these:
@@ -29,3 +28,8 @@ def group_lines(data: Union[str,List[str]]) -> List[List[str]]:
         else:
             groups.append([])
     return groups
+
+
+def minmax(numbers: List[int]) -> Tuple[int, int]:
+    """Return min and max values from given list of integers"""
+    return (min(numbers), max(numbers))

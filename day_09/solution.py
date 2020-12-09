@@ -60,11 +60,10 @@ def solve_p2(numbers: List[str], preamble_length: int = 25) -> Optional[int]:
     """Solution to the 2nd part of the challenge"""
     inv_idx, inv_num = solve_p1(numbers, preamble_length)
     seq = sum_to_target(inv_num, numbers, 0, inv_idx)
-    return sum(minmax(seq))
+    return sum(utils.minmax(seq))
 
 
-def minmax(numbers: List[int]):
-    return (min(numbers), max(numbers))
+
 
 text_1 = """35
 20
