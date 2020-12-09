@@ -27,19 +27,41 @@ def sum_of_two(target: int, numbers: List[int], sidx, eidx):
     return None
 
 
-def sum_to_target(target: int,
-                  numbers: List[int], sidx, eidx) -> Optional[List[int]]:
-    """Find contiguous sequence of numbers from <numbers> between [sidx,eidx)
+def sum_to_target1(target: int,
+                   numbers: List[int], eidx) -> Optional[List[int]]:
+    """Find contiguous sequence of numbers from <numbers> between [0,eidx)
     that sum up to given <target>. The sequence must contains at least 2 items.
-    Return the sequence"""
-    for le in range(0, eidx):
-        t = numbers[le]
-        for ri in range(le+1, eidx):
+    Return the sequence found.
+    Naive approach."""
+    for li in range(0, eidx):
+        t = numbers[li]
+        for ri in range(li+1, eidx):
             t += numbers[ri]
             if t == target:
-                return numbers[le:1+ri]
+                return numbers[li:1+ri]
             elif t > target:
                 break
+    return None
+
+
+def sum_to_target(target: int,
+                  numbers: List[int], eidx) -> Optional[List[int]]:
+    """Find contiguous sequence of numbers from <numbers> between [0,eidx)
+    that sum up to given <target>. The sequence must contains at least 2 items.
+    Return the sequence found.
+    Sliding window approach."""
+
+    li, ri = 0, 0
+    t = numbers[li]
+    while ri < eidx:
+        if t < target or li == ri:
+            ri += 1
+            t += numbers[ri]
+        elif t > target:
+            t -= numbers[li]
+            li += 1
+        elif t == target:
+            return numbers[li:ri+1]
     return None
 
 
@@ -59,7 +81,7 @@ def solve_p1(numbers: List[int],
 def solve_p2(numbers: List[str], preamble_length: int = 25) -> Optional[int]:
     """Solution to the 2nd part of the challenge"""
     inv_idx, inv_num = solve_p1(numbers, preamble_length)
-    seq = sum_to_target(inv_num, numbers, 0, inv_idx)
+    seq = sum_to_target(inv_num, numbers, inv_idx)
     return sum(utils.minmax(seq))
 
 
