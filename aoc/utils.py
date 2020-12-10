@@ -30,6 +30,11 @@ def group_lines(data: Union[str, List[str]]) -> List[List[str]]:
     return groups
 
 
+def to_numbers(lines: List[str]) -> List[int]:
+    """Convert list of lines (strings) to list of ints"""
+    return [int(line) for line in lines]
+
+
 def minmax(numbers: List[int]) -> Tuple[int, int]:
     """Return min and max values from given list of integers"""
     return (min(numbers), max(numbers))

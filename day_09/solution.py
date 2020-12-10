@@ -15,10 +15,6 @@ from aoc import utils
 DEBUG = False
 
 
-def to_numbers(lines: List[str]) -> List[int]:
-    return [int(line) for line in lines]
-
-
 def sum_of_two(target: int,
                numbers: List[int], sidx, eidx) -> Optional[Tuple[int, int]]:
     for i in range(sidx, eidx):
@@ -117,7 +113,7 @@ def run_tests():
     print("--- Tests ---")
 
     for tid, (inp, exp1, exp2) in enumerate(tests):
-        inp = to_numbers(inp)
+        inp = utils.to_numbers(inp)
 
         res1 = solve_p1(inp, 5)
         print(f"T1.{tid}:", res1[1] == exp1, exp1, res1)
@@ -128,7 +124,7 @@ def run_tests():
 
 def run_real():
     day = '09'
-    lines = to_numbers(utils.load_input())
+    lines = utils.to_numbers(utils.load_input())
 
     print(f"--- Day {day} p.1 ---")
     exp1 = 88311122
