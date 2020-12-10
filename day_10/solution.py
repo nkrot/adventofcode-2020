@@ -33,34 +33,79 @@ def solve_p1(numbers: List[int]) -> int:
 
 def solve_p2(numbers: List[int]) -> int:
     """Solution to the 2nd part of the challenge"""
-    nums = sorted(numbers)
-    if nums[0] > 0:
-        nums.insert(0, 0)
-    nums.append(nums[-1]+3)
+
+    # generate sorted list of all adapters, including the very first one (0)
+    # and the adapter in the device (that is always +3 from the maximum one)
+    adapters = sorted(numbers)
+    if adapters[0] > 0:
+        adapters.insert(0, 0)
+    adapters.append(adapters[-1]+3)
     if DEBUG:
-        print(nums)
-    mx = nums[-1]
+        print(adapters)
+
+    # We will represent all possible chains of adapters as a graph in form
+    # of a matrix, in which a point at coordinate [row,col] has a non-zero
+    # value to indicate the adapter #row is connected to (takes input from)
+    # the adapter #col. For example,
+    # * adapter #1 receives input from adapter #0
+    # * adapter #2 receives inputs from adapters #0 and #1
+    # * adapter #3 receives inputs from adapters #0 and #2
+    # * final adapter #4 receives input from adapter #3
+    # [the actual connection rules are somewhat different]
+    # then the connection matrix will be like this:
+    #
+    #   | 0 | 1 | 2 | 3 | 4 |
+    # --|---|---|---|---|---|
+    # 0 | . | . | . | . | . |  # source
+    # 1 | 1 | . | . | . | . |  # adapter #1 receives input from #0
+    # 2 | 1 | 1 | . | . | . |  # adapter #2 receives inputs from #0, #1
+    # 3 | 1 | . | 1 | . | . |  # adapter #3 receives inputs from #0, #2
+    # 4 | . | . | . | 1 | . |  # adapter #4 receives inputs from #3
+
+    # initialize the matrix will all zeroes
+    mx = adapters[-1]
     mat = [[0] * (1+mx) for i in range(mx+1)]
 
     # connect adapters according to rules
-    for r, nr in enumerate(nums):
+    for r, nr in enumerate(adapters):
         if r == 0:
             continue
         for c in {max(r-3, 0), max(r-2, 0), max(r-1, 0)}:
-            nc = nums[c]
+            nc = adapters[c]
             diff = nr - nc
             assert diff != 0, "Shit happened"
             if diff < 4:
                 # print(nc, nr, diff)
                 mat[nr][nc] += 1
 
-    # update the number of previous adapters
+    # At the next step, we will update connections (non-zeroes) to be
+    # the number of combinations of adapters that end at adapter #col
+    # (incidence degree?)
+    #
+    #   | 0 | 1 | 2 | 3 | 4 |
+    # --|---|---|---|---|---|
+    # 0 | . | . | . | . | . |
+    # 1 | 1 | . | . | . | . |
+    # 2 | 1 | 1 | . | . | . |
+    # 3 | 1 | . | 2 | . | . |
+    # 4 | . | . | . | 3 | . |
+    #
+    # Here,
+    # [3,2] = 2 because there are 2 combinations: (0,1,2,3) and (0,3)
+    # [4,3] = 3 because there is 1 new combnination (0,3,4)
+    #           plus 2 combinations from [3,2]
+    # The sum of numbers in each row indicates the total number of combinations
+    # of adapters that end with this specific adapter. With that in mind,
+    # the sum of numbersin the row corresponding to the last adapter is
+    # the answer to the problem.
+
+    # update intersections with degree of incidence
     for ri, row in enumerate(mat):
         n_ins = sum(row)
         if DEBUG:
             print(n_ins, ri, row)
         if n_ins > 1:
-            # check next 3 rows
+            # check next 3 rows and update the columns
             for rj in range(ri+1, ri+4):
                 if rj < len(mat) and mat[rj][ri] > 0:
                     mat[rj][ri] += (n_ins-1)
