@@ -1,10 +1,11 @@
 
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 
-def load_input(fname: str = 'input.txt') -> List[str]:
+def load_input(fname: Optional[str] = None) -> List[str]:
     """Load file, either given or default 'input.txt' and return its content
     as a list of lines. All lines are returned, including empty ones."""
+    fname = fname or 'input.txt'
     lines = []
     with open(fname) as fd:
         for line in fd:

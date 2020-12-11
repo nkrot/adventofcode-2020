@@ -8,95 +8,46 @@
 
 import os
 import sys
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
+import aoc.board
+
 
 DEBUG = False
 
-class Board(object):
 
-    @classmethod
-    def load_from_file(cls, fname):
-        with open(fname) as fd:
-            return cls.from_text(fd.read())
-
-    @classmethod
-    def from_text(cls, text):
-        lines = [line.strip() for line in text.split('\n')]
-        lines = [line for line in lines if line]
-        return cls.from_lines(lines)
-
-    @classmethod
-    def from_lines(cls, lines):
-        board = cls()
-        for rowi,line in enumerate(lines):
-            for coli,char in enumerate(line):
-                sq = cls.Square(char, (rowi, coli))
-                board.add(sq)
-        return board
+class Park(aoc.Board):
 
     def __init__(self):
-        self.data = {}
+        super().__init__()
         self.repeats = True
 
-    @property
-    def shape(self):
-        """Return (height,width) """
-        maxx = sorted(self.data.keys()).pop()
-        maxy = sorted(self.data[0].keys()).pop()
-        return (1+maxx, 1+maxy)
-
-    def add(self, square: 'Square'):
-        x, y = square.coord
-        self.data.setdefault(x, {})[y] = square
-
     def __getitem__(self, *args):
-        x, y = args[0]
-        row = self.data.get(x, {})
+        if len(args) == 1:
+            x, y = args[0]
+        elif len(args) == 2:
+            x, y = args
+        else:
+            raise ValueError(f"Wrong number of arguments: {args}")
+        row = self.squares.get(x, {})
         if self.repeats:
-            maxy = sorted(self.data[0].keys()).pop()
+            maxy = sorted(self.squares[0].keys()).pop()
             _y = y % (1+maxy)
             sq = row.get(_y, None)
             if sq:
-                sq.y = y
+                sq.y = y  # unused. for consistency :)
         else:
             sq = row.get(y, None)
         return sq
-
-    def __str__(self):
-        lines = []
-        for rowi in sorted(self.data.keys()):
-            rowd = self.data[rowi]
-            row = [rowd[coli].value for coli in sorted(rowd.keys())]
-            lines.append("".join(row))
-        return "\n".join(lines)
-
-
-    class Square(object):
-
-        def __init__(self, value: str, xy: Optional[Tuple[int,int]] = None):
-            length = len(value)
-            assert length == 1, "Must be of length 1 but is {length}"
-            self.value = value
-            self.x, self.y = list(xy or [-1,-1])
-
-        @property
-        def coord(self):
-            """Return (row, column)"""
-            return (self.x, self.y)
-
-        def __repr__(self):
-            return "{}: value='{}', coord={}".format(
-                self.__class__.__name__, self.value, self.coord)
 
 
 class Slope(object):
 
     @classmethod
     def default(cls):
-        return cls(3,1)
+        return cls(3, 1)
 
     def __init__(self, right, down):
         self.right = right
@@ -109,17 +60,14 @@ class Slope(object):
         return self.apply(x, y)
 
 
-def solve_p1(text: Union[str, Board],
-             slope: Optional[Slope] = Slope.default()) -> int:
-    board = text
-    if isinstance(text, str):
-        board = Board.from_text(text)
+def solve_p1(board: Park, slope: Optional[Slope] = None) -> int:
+    slope = slope or Slope.default()
     if DEBUG:
         print(board)
-        print(board.shape)
+        print(board.size())
     x, y, cnt = 0, 0, 0
-    sq = board[x,y]
-    while x < board.shape[0]:
+    sq = board[x, y]
+    while x < board.size()[0]:
         if sq.value == '#':
             cnt += 1
         if DEBUG:
@@ -129,23 +77,23 @@ def solve_p1(text: Union[str, Board],
             else:
                 sq.value = 'O'
         x, y = slope(x, y)
-        sq = board[x,y]
+        sq = board[x, y]
     if DEBUG:
         print(board)
     return cnt
 
 
-def solve_p2(text: Union[str, Board]):
+def solve_p2(park: Park):
     slopes = [
-        Slope(1, 1), # Right 1, down 1.
-        Slope(3, 1), # Right 3, down 1.
-        Slope(5, 1), # Right 5, down 1.
-        Slope(7, 1), # Right 7, down 1.
-        Slope(1, 2), # Right 1, down 2.
+        Slope(1, 1),  # Right 1, down 1.
+        Slope(3, 1),  # Right 3, down 1.
+        Slope(5, 1),  # Right 5, down 1.
+        Slope(7, 1),  # Right 7, down 1.
+        Slope(1, 2),  # Right 1, down 2.
     ]
     prod = 1
     for slope in slopes:
-        prod *= solve_p1(text, slope)
+        prod *= solve_p1(park, slope)
     return prod
 
 
@@ -164,25 +112,25 @@ text1 = \
 
 
 tests = [
-    (text1, 7, 336),
-    (Board.load_from_file("test_input.0.txt"), 7, 336), # stacked text1
-    (Board.load_from_file("test_input.1.txt"), 7, 336),
+    (text1.split('\n'), 7, 336),
+    (utils.load_input("test_input.0.txt"), 7, 336),  # stacked text1
+    (utils.load_input("test_input.1.txt"), 7, 336),
 ]
 
 
 def run_tests():
     print("--- Tests ---")
 
-    for tid,(inp,exp1,exp2) in enumerate(tests):
-        res1 = solve_p1(inp)
+    for tid, (inp, exp1, exp2) in enumerate(tests):
+        res1 = solve_p1(Park.from_lines(inp))
         print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
-        res2 = solve_p2(inp)
+        res2 = solve_p2(Park.from_lines(inp))
         print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
 def run_real():
-    board = Board.load_from_file("input.txt") # 323x31
+    board = Park.load_from_file("input.txt")  # 323x31
 
     print("--- Task 3 p.1 ---")
     exp1 = 176
@@ -197,5 +145,4 @@ def run_real():
 
 if __name__ == '__main__':
     run_tests()
-    run_real()
-
+    # run_real()
