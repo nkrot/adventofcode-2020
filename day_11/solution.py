@@ -72,6 +72,28 @@ class WaitingArea(aoc.Board):
 
         return nseats
 
+    def visible_seats(self, seat):
+        """Return a list of seats that are reachable from the given
+        seat in all 8 directions"""
+        x, y = seat.position
+        nseats = []
+        for dx, dy in self.OFFSETS_AROUND:
+            i = 0
+            while True:
+                i += 1
+                nx, ny = x + i*dx, y + i*dy
+                if nx < 0 or ny < 0:
+                    break
+                nseat = self[nx, ny]
+                # print(nx, ny, repr(nseat))
+                if nseat:
+                    if not nseat.is_floor():
+                        nseats.append(nseat)
+                        break
+                else:
+                    break
+        return nseats
+
     def empty_seats(self) -> List[Seat]:
         """List all empty seats"""
         return [seat for seat in self if seat.is_empty()]
@@ -195,7 +217,7 @@ def solve_p2(wa: WaitingArea) -> int:
     """Solution to the 2nd part of the challenge"""
 
     def select_visible(area, seat):
-        return area.adjacent_seats(seat)
+        return area.visible_seats(seat)
 
     def tolerate_n_neighbours(num_occupied_seats):
         return num_occupied_seats < 5
@@ -226,8 +248,8 @@ def run_tests():
         res1 = solve_p1(WaitingArea.from_text(inp))
         print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
-        # res2 = solve_p2(WaitingArea.from_text(inp))
-        # print(f"T2.{tid}:", res2 == exp2, exp2, res2)
+        res2 = solve_p2(WaitingArea.from_text(inp))
+        print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
 def run_real():
@@ -239,10 +261,10 @@ def run_real():
     res1 = solve_p1(WaitingArea.from_lines(lines))
     print(exp1 == res1, exp1, res1)
 
-    # print(f"--- Day {day} p.2 ---")
-    # exp2 = -1
-    # res2 = solve_p2(WaitingArea.from_lines(lines))
-    # print(exp2 == res2, exp2, res2)
+    print(f"--- Day {day} p.2 ---")
+    exp2 = 2144
+    res2 = solve_p2(WaitingArea.from_lines(lines))
+    print(exp2 == res2, exp2, res2)
 
 
 if __name__ == '__main__':
