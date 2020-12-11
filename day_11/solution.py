@@ -6,7 +6,7 @@
 
 import os
 import sys
-from typing import List
+from typing import List, Callable
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -113,9 +113,10 @@ class Command(object):
         return self.execute()
 
 
-def run_one_round(wa):
+def run_one_round(wa: WaitingArea,
+                  select_seats_to_check: Callable,
+                  acceptable_number_of_occupied_seats: Callable) -> bool:
     debug = False
-
     commands = []
 
     for seat in wa:
@@ -125,7 +126,8 @@ def run_one_round(wa):
         if seat.is_floor():
             continue
 
-        adj_seats = wa.adjacent_seats(seat)
+        adj_seats = select_seats_to_check(wa, seat)
+
         if debug:
             for s in adj_seats:
                 print("  ", repr(s))
@@ -138,7 +140,9 @@ def run_one_round(wa):
             if all(empty_adj_seats):
                 commands.append(Command.occupy(seat))
         else:
-            if empty_adj_seats.count(False) > 3:
+            # number of occupied seats that forces people to leave their seat
+            c_occupied_seats = empty_adj_seats.count(False)
+            if not acceptable_number_of_occupied_seats(c_occupied_seats):
                 commands.append(Command.leave(seat))
 
     for cmd in commands:
@@ -149,8 +153,10 @@ def run_one_round(wa):
     return changed
 
 
-def solve_p1(wa: WaitingArea):
-    """Solution to the 1st part of the challenge"""
+def solve(wa: WaitingArea,
+          select_seats_to_check: Callable,
+          check_number_of_occupied_seats: Callable) -> int:
+
     if DEBUG:
         print("--- Before ---")
         print(wa)
@@ -158,7 +164,9 @@ def solve_p1(wa: WaitingArea):
     c_rounds = 0
     while True:
         c_rounds += 1
-        changed = run_one_round(wa)
+        changed = run_one_round(wa,
+                                select_seats_to_check,
+                                check_number_of_occupied_seats)
         if DEBUG:
             print(f"--- After round {c_rounds} ---")
             print(wa)
@@ -171,10 +179,28 @@ def solve_p1(wa: WaitingArea):
     return len(wa.occupied_seats())
 
 
-def solve_p2(data):
+def solve_p1(wa: WaitingArea) -> int:
+    """Solution to the 1st part of the challenge"""
+
+    def select_adjacent(area, seat):
+        return area.adjacent_seats(seat)
+
+    def tolerate_n_neighbours(num_occupied_seats):
+        return num_occupied_seats < 4
+
+    return solve(wa, select_adjacent, tolerate_n_neighbours)
+
+
+def solve_p2(wa: WaitingArea) -> int:
     """Solution to the 2nd part of the challenge"""
-    # TODO
-    pass
+
+    def select_visible(area, seat):
+        return area.adjacent_seats(seat)
+
+    def tolerate_n_neighbours(num_occupied_seats):
+        return num_occupied_seats < 5
+
+    return solve(wa, select_visible, tolerate_n_neighbours)
 
 
 text_1 = """L.LL.LL.LL
@@ -189,7 +215,7 @@ L.LLLLLL.L
 L.LLLLL.LL"""
 
 tests = [
-    (text_1, 37, -1),
+    (text_1, 37, 26),
 ]
 
 
@@ -214,8 +240,8 @@ def run_real():
     print(exp1 == res1, exp1, res1)
 
     # print(f"--- Day {day} p.2 ---")
-    # exp2 = 360
-    # res2 = solve_p2(lines)
+    # exp2 = -1
+    # res2 = solve_p2(WaitingArea.from_lines(lines))
     # print(exp2 == res2, exp2, res2)
 
 
