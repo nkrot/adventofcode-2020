@@ -7,24 +7,14 @@
 import os
 import sys
 from typing import List, Tuple
+import math
+import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
 
 
-DEBUG = not True
-
-
-def move(operation: Tuple[str, int], obj: dict):
-    """Update the coordinates of obj according to the the instruction"""
-    name, arg = operation
-
-    k = 1 if name in 'NE' else -1
-
-    if name in 'NS':
-        obj['ns'] += arg * k
-    if name in 'WE':
-        obj['we'] += arg * k
+DEBUG = False
 
 
 def parse_commands(lines: List[str]) -> List[Tuple[str, int]]:
@@ -36,9 +26,57 @@ def parse_commands(lines: List[str]) -> List[Tuple[str, int]]:
     return commands
 
 
+class Vektor(object):
+
+    @classmethod
+    def base(cls, d):
+        if d == 'N':
+            x, y = [0, 1]
+        elif d == 'S':
+            x, y = [0, -1]
+        elif d == 'E':
+            x, y = [1, 0]
+        elif d == 'W':
+            x, y = [-1, 0]
+        return cls(x, y)
+
+    def __init__(self, x, y, d=None):
+        self.x = x
+        self.y = y
+        self.d = d
+        if d:
+            assert d in 'NSWE', f"Wrong value of direction: {d}"
+
+    def __add__(self, other):
+        return self.__class__(self.x+other.x, self.y+other.y, self.d)
+
+    def __mul__(self, n):
+        return self.__class__(self.x*n, self.y*n, self.d)
+
+    def __rmul__(self, n):
+        return self * n
+
+    def __rmatmul__(self, other):
+        res = other @ [self.x, self.y]
+        # surprise! have to use rint(), because int(1.) outputs 0.
+        # this happens because 1. is actually 0.9999999
+        res = np.rint(res)
+        return self.__class__(int(res[0]), int(res[1]), self.d)
+
+    def __repr__(self):
+        return "<{}: x={}, y={}, d={}>".format(
+            self.__class__.__name__, self.x, self.y, self.d)
+
+    def l1_distance(self):
+        """L1/Manhattan distance to the origin (0,0)"""
+        return abs(self.x) + abs(self.y)
+
+    __array_priority__ = 10000
+
+
 def solve_p1(data: List[str], ship: dict = None) -> int:
     """Solution to the 1st part of the challenge"""
-    ship = {'d': 'E', 'ns': 0, 'we': 0}
+    ship = Vektor(0, 0, 'E')
 
     commands = parse_commands(data)
 
@@ -46,31 +84,29 @@ def solve_p1(data: List[str], ship: dict = None) -> int:
 
         if cmd == 'F':
             # moving forward can be expressed as moving in the direction
-            # where the ship points.
-            cmd = ship['d']
+            # in where the ship points.
+            cmd = ship.d
 
         if cmd in 'NSEW':
-            move((cmd, arg), ship)
+            ship = ship + Vektor.base(cmd) * arg
 
         # rotation
         if cmd == 'L':
             cmd, arg = 'R', 360 - arg
         if cmd == 'R':
-            steps = ['N', 'E', 'S', 'W'] * 2
-            while steps[0] != ship['d']:
-                steps.pop(0)
-            ship['d'] = steps[arg//90]
+            ribbon = 'NESW' * 2
+            i = ribbon.index(ship.d) + arg//90
+            ship.d = ribbon[i]
 
-    return abs(ship['ns']) + abs(ship['we'])
+    return ship.l1_distance()
 
 
 def solve_p2(data: List[str]) -> int:
     """Solution to the 2nd part of the challenge"""
     commands = parse_commands(data)
 
-    ship = {'we': 0, 'ns': 0, 'd': 'E'}
-    # waypoint coordinates are always relative to the ship
-    waypoint = {'we': 10, 'ns': 1}
+    ship = Vektor(0, 0, 'E')
+    waypoint = Vektor(10, 1)
 
     if DEBUG:
         print("Ship:", ship)
@@ -82,31 +118,33 @@ def solve_p2(data: List[str]) -> int:
 
         # move ship towards the waypoint
         if cmd in 'F':
-            ship['ns'] += arg * waypoint['ns']
-            ship['we'] += arg * waypoint['we']
+            ship = ship + arg * waypoint
 
-        # rotate waypoint around the ship
-        if cmd == 'L':
-            cmd, arg = 'R', 360 - arg
-        if cmd == 'R':
-            if arg == 90:
-                waypoint['we'], waypoint['ns'] = waypoint['ns'], -waypoint['we']
-            elif arg == 90*2:
-                waypoint['we'], waypoint['ns'] = -waypoint['we'], -waypoint['ns']
-            elif arg == 90*3:
-                waypoint['we'], waypoint['ns'] = -waypoint['ns'], waypoint['we']
-            else:
-                raise ValueError(f"Wrong angle: {arg}")
-
-        # transfer the waypoint relative to the ship
         if cmd in 'NSEW':
-            move((cmd, arg), waypoint)
+            waypoint = waypoint + arg * Vektor.base(cmd)
+
+        if cmd in 'LR':
+            # rotation is counter-clockwise, therefore we express rotation
+            # to the right in terms of rotation to the left.
+            arg = 360 - arg if cmd == 'R' else arg
+
+            # Rotation by any angle alpha means
+            # x2 = cos(alpha)*x1 - sin(alpha) * y1
+            # y2 = sin(alpha)*x1 + cos(alpha) * y1
+            # which is equivalent in the linear form to matrix multiplcation
+            # [[cos(alpha), sin(alpha)]      [[x1],
+            #  [sin(alpha), cos(alpha)]]      [y1]]
+
+            degr = math.radians(arg)  # surprise! trig in math speaks radians
+            rotm = np.array([[math.cos(degr), - math.sin(degr)],
+                             [math.sin(degr), math.cos(degr)]])
+            waypoint = rotm @ waypoint
 
         if DEBUG:
             print("Ship:", ship)
             print("Wayp:", waypoint)
 
-    return abs(ship['ns']) + abs(ship['we'])
+    return ship.l1_distance()
 
 
 text_1 = """F10
