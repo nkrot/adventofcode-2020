@@ -1,5 +1,7 @@
 
-from typing import List
+from typing import List, Optional
+
+from . import utils
 
 
 class Square(object):
@@ -8,12 +10,40 @@ class Square(object):
         self.position = pos or (-1, -1)
         self.value = value
 
+    @property
+    def x(self):
+        return self.position[0]
+
+    @x.setter
+    def x(self, val):
+        self.position = (val, self.y)
+
+    @property
+    def y(self):
+        return self.position[1]
+
+    @y.setter
+    def y(self, val):
+        self.position = (self.x, val)
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return "<{}: value='{}', position={}>".format(
+                self.__class__.__name__, self.value, self.position)
+
 
 class Board(object):
     PIECE = Square
 
     OFFSETS_AROUND = [(-1, 0), (-1, +1), (0, +1), (+1, +1),
                       (+1, 0), (+1, -1), (0, -1), (-1, -1)]
+
+    @classmethod
+    def load_from_file(cls, fname: Optional[str] = None):
+        lines = utils.load_input(fname)
+        return cls.from_lines(lines)
 
     @classmethod
     def from_text(cls, text: str):
