@@ -1,15 +1,10 @@
---- Test, p.1 --- 
-True 7 7
---- Test, p.2 --- 
-True 336 336
---- Test, p.1 --- 
-True 7 7
---- Test, p.2 --- 
-True 336 336
---- Test, p.1 --- 
-True 7 7
---- Test, p.2 --- 
-True 336 336
+--- Tests ---
+T1.0: True 7 7
+T2.0: True 336 336
+T1.1: True 7 7
+T2.1: True 336 336
+T1.2: True 7 7
+T2.2: True 336 336
 --- Task 3 p.1 ---
 True 176 176
 --- Task 3 p.2 ---

@@ -2,13 +2,11 @@
 
 # # #
 #
-# TODO
-# 1) there is no need to store the whole board. only squares with Trees
-#    can be stored.
+#
 
 import os
 import sys
-from typing import Optional, Union
+from typing import Optional
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -49,25 +47,25 @@ class Slope(object):
     def default(cls):
         return cls(3, 1)
 
-    def __init__(self, right, down):
+    def __init__(self, right: int, down: int):
         self.right = right
         self.down = down
 
-    def apply(self, x, y):
+    def apply(self, x: int, y: int):
         return (x + self.down, y + self.right)
 
-    def __call__(self, x, y):
+    def __call__(self, x: int, y: int):
         return self.apply(x, y)
 
 
-def solve_p1(board: Park, slope: Optional[Slope] = None) -> int:
+def solve_p1(park: Park, slope: Optional[Slope] = None) -> int:
     slope = slope or Slope.default()
     if DEBUG:
-        print(board)
-        print(board.size())
+        print(park)
+        print(park.size())
     x, y, cnt = 0, 0, 0
-    sq = board[x, y]
-    while x < board.size()[0]:
+    sq = park[x, y]
+    while x < park.size()[0]:
         if sq.value == '#':
             cnt += 1
         if DEBUG:
@@ -77,9 +75,9 @@ def solve_p1(board: Park, slope: Optional[Slope] = None) -> int:
             else:
                 sq.value = 'O'
         x, y = slope(x, y)
-        sq = board[x, y]
+        sq = park[x, y]
     if DEBUG:
-        print(board)
+        print(park)
     return cnt
 
 
@@ -130,19 +128,18 @@ def run_tests():
 
 
 def run_real():
-    board = Park.load_from_file("input.txt")  # 323x31
 
     print("--- Task 3 p.1 ---")
     exp1 = 176
-    res1 = solve_p1(board)
+    res1 = solve_p1(Park.load_from_file())  # 323x31
     print(res1 == exp1, exp1, res1)
 
     print("--- Task 3 p.2 ---")
     exp2 = 5872458240
-    res2 = solve_p2(board)
+    res2 = solve_p2(Park.load_from_file())
     print(res2 == exp2, exp2, res2)
 
 
 if __name__ == '__main__':
     run_tests()
-    # run_real()
+    run_real()
