@@ -15,21 +15,16 @@ from aoc import utils
 DEBUG = not True
 
 
-def execute(operation: Tuple[str, int], obj: dict, refp: dict = None):
-    """Update obj in place"""
-
+def move(operation: Tuple[str, int], obj: dict):
+    """Update the coordinates of obj according to the the instruction"""
     name, arg = operation
-    refp = refp or dict(obj)
 
-    # transfer relative to the reference point
-    if name == 'N':
-        obj['ns'] = refp['ns'] + arg
-    elif name == 'S':
-        obj['ns'] = refp['ns'] - arg
-    elif name == 'E':
-        obj['we'] = refp['we'] + arg
-    elif name == 'W':
-        obj['we'] = refp['we'] - arg
+    k = 1 if name in 'NE' else -1
+
+    if name in 'NS':
+        obj['ns'] += arg * k
+    if name in 'WE':
+        obj['we'] += arg * k
 
 
 def parse_commands(lines: List[str]) -> List[Tuple[str, int]]:
@@ -49,16 +44,13 @@ def solve_p1(data: List[str], ship: dict = None) -> int:
 
     for cmd, arg in commands:
 
-        # movement
         if cmd == 'F':
-            if ship['d'] == 'N':
-                ship['ns'] += arg
-            elif ship['d'] == 'S':
-                ship['ns'] -= arg
-            elif ship['d'] == 'E':
-                ship['we'] += arg
-            elif ship['d'] == 'W':
-                ship['we'] -= arg
+            # moving forward can be expressed as moving in the direction
+            # where the ship points.
+            cmd = ship['d']
+
+        if cmd in 'NSEW':
+            move((cmd, arg), ship)
 
         # rotation
         if cmd == 'L':
@@ -69,10 +61,6 @@ def solve_p1(data: List[str], ship: dict = None) -> int:
                 steps.pop(0)
             ship['d'] = steps[arg//90]
 
-        # transfer
-        if cmd in 'NSEW':
-            execute((cmd, arg), ship)
-
     return abs(ship['ns']) + abs(ship['we'])
 
 
@@ -82,7 +70,7 @@ def solve_p2(data: List[str]) -> int:
 
     ship = {'we': 0, 'ns': 0, 'd': 'E'}
     # waypoint coordinates are always relative to the ship
-    waypoint = {'we': 10, 'ns': 1, }
+    waypoint = {'we': 10, 'ns': 1}
 
     if DEBUG:
         print("Ship:", ship)
@@ -112,7 +100,7 @@ def solve_p2(data: List[str]) -> int:
 
         # transfer the waypoint relative to the ship
         if cmd in 'NSEW':
-            execute((cmd, arg), waypoint)
+            move((cmd, arg), waypoint)
 
         if DEBUG:
             print("Ship:", ship)
@@ -134,7 +122,6 @@ tests = [
     ("L90\nF1\nL90\nR90\nR90".split('\n'), 1, 11),
     ("R180\nF1\nL180".split('\n'), 1, 11),
     ("R270\nF1\nL270".split('\n'), 1, 11),
-
 ]
 
 
