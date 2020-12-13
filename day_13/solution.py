@@ -2,7 +2,7 @@
 
 # # #
 #
-# eetd -- earliest Estimated Time of Departure
+#
 
 import os
 import sys
@@ -17,7 +17,8 @@ DEBUG = not True
 
 def solve_p1(data: List[str]) -> int:
     """Solution to the 1st part of the challenge"""
-    eetd = int(data[0])
+
+    eetd = int(data[0])  # earliest Estimated Time of Departure
     buses = [int(b) for b in data[1].split(',') if b != 'x']
 
     def make_pairs():
@@ -71,45 +72,32 @@ def solve_p2(data: List[str], start_at: Optional[int] = None) -> int:
         for bus in buses:
             print(bus)
 
-    buses = sorted(buses, key=lambda b: -b.cycle)
+    buses = sorted(buses, key=lambda b: b.cycle)
     # show_buses_in_time(buses)
     # exit(100)
 
-    basebus = buses.pop(0)
-    # basebus = buses[0]
-
-    step = basebus.cycle
+    step = 1
     now = (start_at or 0) // step * step
     if DEBUG:
-        print(f"Starting at: {now}, {len(buses)}, {basebus}")
+        print(f"Starting at: {now}, buses={len(buses)}, first={buses[0]}")
 
-    c_loops, c_max_loops = 0, 50000
     while True:  # now < 3425:
-        c_loops += 1
-        if c_loops == c_max_loops:
-            print(f"Checking {c_loops}: now={now}")
-            c_loops = 0
-
-        c_ok = 0
-        t = now - basebus.timeoffset
         for bi, bus in enumerate(buses):
-            soon = t + bus.timeoffset
+            soon = now + bus.timeoffset
             departs = bus.departing_at(soon)
             if DEBUG:
-                print("Time: {}, {}, {}\t{}\t{}".format(
-                    now, t, soon, bus, departs))
+                print("Time: {}, {}\t{}\t{}".format(now, soon, bus, departs))
             if departs:
-                c_ok += 1
                 step *= buses.pop(bi).cycle
-                # print(f"Bus {bus} match. Increasing step {step}")
+                if DEBUG:
+                    print(f"Bus {bus} match. Increasing step to {step}")
             else:
                 break
         if not len(buses):
             break
-
         now += step
 
-    return t
+    return now
 
 
 def show_buses_in_time(buses):
@@ -117,7 +105,6 @@ def show_buses_in_time(buses):
         for bus in buses:
             departs = bus.departing_at(t)
             print("Time: {}\t{}\t{}".format(t, bus, departs))
-
         print()
 
 
@@ -126,7 +113,7 @@ text_1 = """939
 
 
 tests = [
-    # (text_1.split('\n'), 59*5, 1068781),
+    (text_1.split('\n'), 59*5, 1068781),
     ("-1\n17,x,13,19".split('\n'), None, 3417),
     ("-1\n67,7,59,61".split('\n'), None, 754018),
     ("-1\n67,x,7,59,61".split('\n'), None, 779210),
