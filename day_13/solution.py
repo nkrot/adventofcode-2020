@@ -92,17 +92,19 @@ def solve_p2(data: List[str], start_at: Optional[int] = None) -> int:
 
         c_ok = 0
         t = now - basebus.timeoffset
-        for bus in buses:
+        for bi, bus in enumerate(buses):
             soon = t + bus.timeoffset
-            departs_at = bus.departing_at(soon)
+            departs = bus.departing_at(soon)
             if DEBUG:
                 print("Time: {}, {}, {}\t{}\t{}".format(
-                    now, t, soon, bus, departs_at))
-            if departs_at:
+                    now, t, soon, bus, departs))
+            if departs:
                 c_ok += 1
+                step *= buses.pop(bi).cycle
+                # print(f"Bus {bus} match. Increasing step {step}")
             else:
                 break
-        if c_ok == len(buses) and t > 0:
+        if not len(buses):
             break
 
         now += step
@@ -150,19 +152,19 @@ def run_real():
     day = '13'
     lines = utils.load_input()
 
-    # print(f"--- Day {day} p.1 ---")
-    # exp1 = 171
-    # res1 = solve_p1(lines)
-    # print(exp1 == res1, exp1, res1)
+    print(f"--- Day {day} p.1 ---")
+    exp1 = 171
+    res1 = solve_p1(lines)
+    print(exp1 == res1, exp1, res1)
 
     print(f"--- Day {day} p.2 ---")
-    exp2 = -1
-    start_at = 100000000000000
-    # too low: 100240769349338
+    exp2 = 539746751134958
+    # start_at = 100000000000000
+    start_at = 0
     res2 = solve_p2(lines, start_at)
     print(exp2 == res2, exp2, res2)
 
 
 if __name__ == '__main__':
-    # run_tests()
+    run_tests()
     run_real()
