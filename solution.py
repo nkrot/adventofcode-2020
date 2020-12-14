@@ -6,6 +6,7 @@
 # 2) fill in TODOs
 #
 
+import re
 import os
 import sys
 from typing import List
@@ -17,20 +18,25 @@ from aoc import utils
 DEBUG = False
 
 
-def solve_p1(data):
+def solve_p1(lines: List[str]) -> int:
     """Solution to the 1st part of the challenge"""
     # TODO
-    pass
+    return 0
 
 
-def solve_p2(data):
+def solve_p2(lines: List[str]) -> int:
     """Solution to the 2nd part of the challenge"""
     # TODO
-    pass
+    return 0
+
+
+text_1 = """hello
+yellow
+melon"""
 
 
 tests = [
-    # (input, exp1, exp2),
+    # (text_1.split('\n'), exp1, exp2),
     # TODO
 ]
 
