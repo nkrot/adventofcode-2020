@@ -28,28 +28,20 @@ class Mask(object):
         return int(bnum, 2)
 
     def v2(self, num) -> List[int]:
-        addrs = []
         bnum = self.to_bin(num)
-        # print(bnum)
-        # print(self.value)
         newnums = [n if m == '0' else m
                    for n, m in zip(list(bnum), list(self.value))]
-        # print(newnums)
-        addrs = [newnums]
 
+        # replace X with any posisble value
+        addrs = [newnums]
         for _ in range(newnums.count('X')):
-            for i in range(len(addrs)):
+            for _ in range(len(addrs)):
                 curr = addrs.pop(0)
-                if 'X' in curr:
-                    pos = curr.index('X')
-                    # print("in :", "".join(curr))
-                    for i in {"0", "1"}:
-                        upd = list(curr)
-                        upd[pos] = i
-                        # print("out:", "".join(upd))
-                        addrs.append(upd)
-                else:
-                    addrs.insert(0, curr)
+                pos = curr.index('X')
+                for i in {"0", "1"}:
+                    upd = list(curr)
+                    upd[pos] = i
+                    addrs.append(upd)
 
         # print("--- final ---")
         addrs = [self.to_int("".join(addr)) for addr in addrs]
@@ -88,10 +80,7 @@ def solve_p1(lines: List[str]) -> int:
             mask = Mask(cmd[1])
         elif cmd[0] == 'mem':
             mem[cmd[1]] = mask.v1(cmd[2])
-
-    s = sum(mem.values())
-
-    return s
+    return sum(mem.values())
 
 
 def solve_p2(lines: List[str]) -> int:
@@ -104,8 +93,7 @@ def solve_p2(lines: List[str]) -> int:
         elif cmd[0] == 'mem':
             for addr in mask.v2(cmd[1]):
                 mem[addr] = int(cmd[2])
-    s = sum(mem.values())
-    return s
+    return sum(mem.values())
 
 
 text_1 = """mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
