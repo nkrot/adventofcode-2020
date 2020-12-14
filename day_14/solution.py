@@ -32,7 +32,7 @@ class Mask(object):
         newnums = [n if m == '0' else m
                    for n, m in zip(list(bnum), list(self.value))]
 
-        # replace X with any posisble value
+        # replace X with any possible value
         addrs = [newnums]
         for _ in range(newnums.count('X')):
             for _ in range(len(addrs)):
@@ -60,13 +60,12 @@ def parse_lines(lines: List[str]) -> List[tuple]:
     commands = []
     for line in lines:
         tokens = line.strip().split()
-
         if tokens[0] == 'mask':
-            commands.append(('mask', tokens[2]))
-
+            cmd = ('mask', tokens[2])
         elif tokens[0].startswith('mem['):
             m = re.search(r'mem\[(\d+)\]', line)
-            commands.append(("mem", int(m.group(1)), tokens[2]))
+            cmd = ("mem", int(m.group(1)), tokens[2])
+        commands.append(cmd)
 
     return commands
 
