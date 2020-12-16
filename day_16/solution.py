@@ -135,7 +135,7 @@ def solve_p1(lines: List[str]) -> int:
     return error_rate
 
 
-def solve_p2(lines: List[str]) -> int:
+def solve_p2(lines: List[str], for_testing=False) -> int:
     """Solution to the 2nd part of the challenge"""
     rules = read_rules(lines)
     my_ticket, tickets = read_tickets(lines)
@@ -210,6 +210,9 @@ def solve_p2(lines: List[str]) -> int:
 
     if DEBUG or True:
         print(my_ticket)
+
+    if for_testing:
+        return my_ticket.field_names
 
     res = 1
     for fieldname, fieldvalue in my_ticket.fields():
@@ -334,7 +337,7 @@ nearby tickets:
 
 tests = [
     (text_1.split('\n'), 4 + 55 + 12, None),
-    (text_2.split('\n'), None, None),  # row, class, seat
+    (text_2.split('\n'), None, ('row', 'class', 'seat')),
 ]
 
 
@@ -347,7 +350,7 @@ def run_tests():
             print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
         if exp2 is not None:
-            res2 = solve_p2(inp)
+            res2 = solve_p2(inp, True)
             print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 

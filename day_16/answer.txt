@@ -1,5 +1,7 @@
 --- Tests ---
 T1.0: True 71 71
+<Ticket: 11,12,13 row,class,seat>
+T2.1: True ('row', 'class', 'seat') ('row', 'class', 'seat')
 --- Day 16 p.1 ---
 True 27850 27850
 --- Day 16 p.2 ---
