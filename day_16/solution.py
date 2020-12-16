@@ -5,6 +5,11 @@
 # as it is implemented now is expremely inconvenient to use and impossible
 # to understand.
 #
+# Alternative algorithm for p.2?
+# remove a rule or part of a rule
+# find tickets become invalid and why (positions that are no longer valid)
+#
+
 
 import re
 import os
@@ -312,11 +317,6 @@ def show(votes, title: str = None):
             vts = votes_from_ticket
             fields.append(",".join(sorted(vts)))
         print(" | ".join(fields))
-
-
-# Alterntive?
-# remove a rule or part of a rule
-# which tickets become invalid and why (positions that are no longer valid)
 
 
 text_1 = """class: 1-3 or 5-7
