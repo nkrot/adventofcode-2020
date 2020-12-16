@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 # # #
-#
+# TODO: p.2 needs refactoring, especially the data structure. the matrix
+# as it is implemented now is expremely inconvenient to use and impossible
+# to understand.
 #
 
 import re
@@ -151,8 +153,26 @@ def solve_p2(lines: List[str], for_testing=False) -> int:
         print("--- Valid tickets ---")
         print(tickets)
 
-    tickets.append(my_ticket)
+    field_names = guess_field_names(tickets, rules)
 
+    my_ticket.field_names = field_names
+
+    if DEBUG:
+        print(my_ticket)
+
+    if for_testing:
+        return my_ticket.field_names
+
+    res = 1
+    for fieldname, fieldvalue in my_ticket.fields():
+        if fieldname.startswith('departure'):
+            print((fieldname, fieldvalue))
+            res *= fieldvalue
+
+    return res
+
+
+def guess_field_names(tickets: List[Ticket], rules: list) -> List[str]:
     # Algorithm
     # for each code in the ticket and based on rules for each individual field,
     # determine a list of fields with which the code complies:
@@ -168,12 +188,14 @@ def solve_p2(lines: List[str], for_testing=False) -> int:
         if DEBUG:
             print(val)
 
+    # TODO: this datastructure is awkward and difficult to use.
+
     # data structure:
     #            | ticket 1           |  ticket 2           | ticket 3
     # -----------|--------------------|---------------------|-------------
     # position_1 [ votes_from_ticket1 , votes_from_ticket_2 , ...        ]
     # position_2 [ votes_from_ticket1 , votes_from_ticket_2 , ...        ]
-    votes = [[None] * len(tickets) for _ in range(len(my_ticket))]
+    votes = [[None] * len(tickets) for _ in range(len(tickets[0]))]
 
     for tnum, ticket in enumerate(tickets):
         if DEBUG:
@@ -206,21 +228,7 @@ def solve_p2(lines: List[str], for_testing=False) -> int:
     field_names = transpose(votes)[0]
     field_names = [n[0] for n in field_names]
 
-    my_ticket.field_names = field_names
-
-    if DEBUG or True:
-        print(my_ticket)
-
-    if for_testing:
-        return my_ticket.field_names
-
-    res = 1
-    for fieldname, fieldvalue in my_ticket.fields():
-        if fieldname.startswith('departure'):
-            print((fieldname, fieldvalue))
-            res *= fieldvalue
-
-    return res
+    return field_names
 
 
 def disambiguate(votes):
@@ -284,6 +292,9 @@ def transpose(rows):
             # print(data)
         for coli, col in enumerate(row):
             # print(col)
+            # IMPORTANT: col is a the original list and transposed matrix
+            # keeps references to the original objects that are therefore
+            # editable. This property is exploited elsewhere.
             data[coli][rowi] = col
     return data
 
