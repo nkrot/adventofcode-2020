@@ -1,0 +1,13 @@
+--- Tests ---
+T1.0: True 71 71
+--- Day 16 p.1 ---
+True 27850 27850
+--- Day 16 p.2 ---
+<Ticket: 191,139,59,79,149,83,67,73,167,181,173,61,53,137,71,163,179,193,107,197 train,arrival platform,departure track,departure date,class,arrival track,wagon,departure time,row,price,departure station,departure platform,seat,departure location,route,type,arrival station,duration,arrival location,zone>
+('departure track', 59)
+('departure date', 79)
+('departure time', 73)
+('departure station', 173)
+('departure platform', 61)
+('departure location', 137)
+True 491924517533 491924517533
