@@ -7,7 +7,6 @@
 import os
 import sys
 from typing import List
-from collections import defaultdict
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -17,48 +16,25 @@ DEBUG = False
 
 
 def solve_p1(numbers: List[int], n_turns: int = 2020) -> int:
-    game = defaultdict(list)
+    game = {}
+    last = 0
 
-    def age(num):
-        return game[num][-1] - game[num][0]
+    for r in range(1, len(numbers)):
+        n = numbers[r-1]
+        game[n] = r
+    last = numbers[r]
 
-    def stores(num, t):
-        # TODO: why storing two numbers? age can receive relevant t
-        # as a parameter.
-        # this method can replace the old value with the new one
-        # returning the old value
-        if DEBUG:
-            print(f"Turn {1+t}:\n  heard {num}")
-        game[num].append(t)
-        if len(game[num]) > 2:
-            game[num].pop(0)
-        return num
-
-    def speaks(num):
-        if DEBUG:
-            print(f" speaks {num}")
-        return num
-
-    # 0,3,6, 0,3,3,1,0,4,0
+    # ex: 0,3,6, 0,3,3,1,0,4,0
     # n_turns = 10
 
-    last = 0
-    for r in range(1, len(numbers)):
-        last = stores(numbers[r-1], r)  # bad name, bad reporting
-    last = numbers[-1]
-
     for r in range(len(numbers), n_turns):
-        if DEBUG:
-            print("")
-            print(f"Turn {1+r}:", last, dict(game))
         if last in game:
-            stores(last, r)
-            last = speaks(age(last))
+            prev, game[last] = game[last], r
+            last = r - prev
         else:
-            stores(last, r)
-            last = speaks(0)
+            game[last] = r
+            last = 0
 
-    # print(dict(game))
     return last
 
 
