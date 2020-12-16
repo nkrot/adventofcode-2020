@@ -55,20 +55,20 @@ def run_tests():
 
 
 def run_real():
-    day = 'DD'
+    day = 'DD'  # TODO
     lines = utils.load_input()
 
     print(f"--- Day {day} p.1 ---")
-    exp1 = 542
+    exp1 = -1
     res1 = solve_p1(lines)
     print(exp1 == res1, exp1, res1)
 
     print(f"--- Day {day} p.2 ---")
-    exp2 = 360
+    exp2 = -1
     res2 = solve_p2(lines)
     print(exp2 == res2, exp2, res2)
 
 
 if __name__ == '__main__':
     run_tests()
-    run_real()
+    # run_real()
