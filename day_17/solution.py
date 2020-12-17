@@ -56,6 +56,9 @@ class Cube(object):
 class EnergySource(object):  # TODO: rename to Board3D
     PIECE = Cube
 
+    # TODO: generate it based on the dimentionality
+    # move in under class Coord
+
     OFFSETS_AROUND = [
         (-1, 0, 0), (-1, +1, 0), (0, +1, 0), (+1, +1, 0),
         (+1, 0, 0), (+1, -1, 0), (0, -1, 0), (-1, -1, 0),
@@ -103,6 +106,7 @@ class EnergySource(object):  # TODO: rename to Board3D
         """Compute min and max values in every dimension
         Return: [(minx, maxx), (miny, maxy), (minz, maxz)]
         """
+        # TODO: make it insensitive to the number of dimensions
         xs, ys, zs = [], [], []
         for x, y, z in self.items.keys():
             xs.append(x)
@@ -116,6 +120,7 @@ class EnergySource(object):  # TODO: rename to Board3D
         spans = self.spans()
         # collect coordinates that are at the edges
         edge_points = []
+        # TODO: make it insensitive to the number of dimensions
         for x, y, z in self.items.keys():
             if x in spans[0] or y in spans[1] or z in spans[1]:
                 edge_points.append((x,y,z))
@@ -129,6 +134,9 @@ class EnergySource(object):  # TODO: rename to Board3D
         self[item.position] = item
 
     def neighbours(self, obj: Union[PIECE, tuple]) -> List[PIECE]:
+        # TODO: make it insensitive to the number of dimensions
+        # as the Coord class to provide the neighbours
+        #
         offsets = self.OFFSETS_AROUND
         if isinstance(obj, self.PIECE):
             x, y, z = obj.position
@@ -136,7 +144,7 @@ class EnergySource(object):  # TODO: rename to Board3D
             x, y, z = obj
         neighbours = []
         for dx, dy, dz in offsets:
-            nxyz = (x + dx, y + dy, z + dz)
+            nxyz = (x + dx, y + dy, z + dz)  # implement coord + coord
             neighbour = self[nxyz]
             if neighbour:
                 neighbours.append(neighbour)
@@ -146,6 +154,7 @@ class EnergySource(object):  # TODO: rename to Board3D
         return list(self.items.values())
 
     def __str__(self):
+        # TODO: how to make it work for 4d case?
         lines = []
         xs, ys, zs = self.spans()
         for z in range(zs[0], zs[1]+1):
