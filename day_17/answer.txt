@@ -1,0 +1,7 @@
+--- Tests ---
+T1.0: True 112 112
+T2.0: False 848 0
+--- Day 17 p.1 ---
+True 359 359
+--- Day 17 p.2 ---
+False -1 0
