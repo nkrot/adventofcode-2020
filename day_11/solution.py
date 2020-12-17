@@ -11,7 +11,7 @@ from typing import List, Callable
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
 import aoc.board
-
+import aoc.command
 
 DEBUG = False
 
@@ -103,7 +103,7 @@ class WaitingArea(aoc.Board):
         return [seat for seat in self if seat.is_occupied()]
 
 
-class Command(object):
+class Action(aoc.Command):
 
     @classmethod
     def occupy(cls, seat):
@@ -115,24 +115,8 @@ class Command(object):
         obj = cls(seat, 'leave')
         return obj
 
-    def __init__(self, receiver: object, meth: str):
-        self.receiver = receiver
-        self.method = meth
-        self.debug = False
-
-    def execute(self):
-        """Execute the command"""
-        assert hasattr(self.receiver, self.method), \
-            f"Object {self.receiver} does not have attribute {self.method}"
-        if self.debug:
-            print(f"Before command: {repr(self.receiver)}")
-        ret = getattr(self.receiver, self.method)()
-        if self.debug:
-            print(f"After command : {repr(self.receiver)}")
-        return ret
-
-    def __call__(self):
-        return self.execute()
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
 def run_one_round(wa: WaitingArea,
@@ -160,12 +144,12 @@ def run_one_round(wa: WaitingArea,
 
         if seat.is_empty():
             if all(empty_adj_seats):
-                commands.append(Command.occupy(seat))
+                commands.append(Action.occupy(seat))
         else:
             # number of occupied seats that forces people to leave their seat
             c_occupied_seats = empty_adj_seats.count(False)
             if not acceptable_number_of_occupied_seats(c_occupied_seats):
-                commands.append(Command.leave(seat))
+                commands.append(Action.leave(seat))
 
     for cmd in commands:
         cmd.execute()
