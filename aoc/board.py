@@ -1,5 +1,6 @@
 
 from typing import List, Optional
+from copy import copy
 
 from . import utils
 
@@ -9,6 +10,7 @@ class Square(object):
     def __init__(self, value=None, pos=None):
         self.position = pos or (-1, -1)
         self.value = value
+        self.parent = None  # reference to a Board
 
     @property
     def x(self):
@@ -25,6 +27,11 @@ class Square(object):
     @y.setter
     def y(self, val):
         self.position = (self.x, val)
+
+    @property
+    def xy(self):
+        """A mere synonyms of .position"""
+        return copy(self.position)
 
     def __str__(self):
         return str(self.value)
@@ -88,13 +95,23 @@ class Board(object):
         rows = []
         height, width = self.size()
         for x in range(height):
-            row = "".join([str(self[(x, y)]) for y in range(width)])
+            rcells = [str(self[(x, y)]) for y in range(width)]
+            row = "".join(rcells)
             rows.append(row)
         return "\n".join(rows)
 
+    # def _add_piece(self, xy, value):
+    #     piece = self.PIECE(value, xy)
+    #     x, y = xy
+    #     self.squares.setdefault(x, {})[y] = piece
+
     def _add_piece(self, xy, value):
-        piece = self.PIECE(value, xy)
-        x, y = xy
+        self.add(self.PIECE(value, xy))
+
+    def add(self, piece):
+        assert isinstance(piece, self.PIECE), "Wrong type"
+        x, y = piece.xy
+        piece.parent = self
         self.squares.setdefault(x, {})[y] = piece
 
     def neighbours(self, piece, offsets=None):
