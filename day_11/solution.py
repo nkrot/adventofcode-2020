@@ -59,20 +59,13 @@ class WaitingArea(aoc.Board):
     def __init__(self):
         super().__init__()
 
-    def adjacent_seats(self, seat):
+    def adjacent_seats(self, seat: Seat) -> List[Seat]:
         """Return a list of seats that are adjacent to the given seat"""
-        x, y = seat.position
-
-        nseats = []
-        for dx, dy in self.OFFSETS_AROUND:
-            nx, ny = x + dx, y + dy
-            nseat = self[nx, ny]
-            if nseat and not nseat.is_floor():
-                nseats.append(nseat)
-
+        nseats = [nseat for nseat in self.neighbours(seat)
+                  if not nseat.is_floor()]
         return nseats
 
-    def visible_seats(self, seat):
+    def visible_seats(self, seat: Seat) -> List[Seat]:
         """Return a list of seats that are reachable from the given
         seat in all 8 directions"""
         x, y = seat.position

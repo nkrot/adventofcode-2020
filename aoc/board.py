@@ -97,6 +97,20 @@ class Board(object):
         x, y = xy
         self.squares.setdefault(x, {})[y] = piece
 
+    def neighbours(self, piece, offsets=None):
+        offsets = offsets or self.OFFSETS_AROUND
+        if isinstance(piece, Square):
+            x, y = piece.position
+        else:
+            x, y = piece
+        npieces = []
+        for dx, dy in offsets:
+            nx, ny = x + dx, y + dy
+            npiece = self[nx, ny]
+            if npiece:
+                npieces.append(npiece)
+        return npieces
+
     class BoardIterator(object):
 
         def __init__(self, board):
