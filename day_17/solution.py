@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
 # # #
-# similar to day_11
+# similar to day_11 but the data structure from day_11 is not appropriate
 #
 
-import re
 import os
 import sys
-from typing import List, Tuple, Union
+from typing import List, Union
+from collections.abc import Iterable
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
-from aoc import Board, Square, Command
+from aoc import Command
 
 
 DEBUG = False
@@ -53,50 +53,102 @@ class Cube(object):
         return str(self.value)
 
 
-class EnergySource(object):  # TODO: rename to Board3D
+class Coord(object):
+
+    OFFSETS_AROUND = [None, None, None, None, None]
+
+    @staticmethod
+    def generate_combinations(ndims):
+        # print(f"Generating combinations for {ndims}")
+        queue = [[]]
+        for ndim in range(ndims):
+            for _ in range(len(queue)):
+                item = queue.pop(0)
+                for n in {-1, 0, 1}:
+                    queue.append(list(item) + [n])
+        return queue
+
+    @classmethod
+    def offsets_around(cls, ndims):
+        if cls.OFFSETS_AROUND[ndims] is None:
+            combinations = cls.generate_combinations(ndims)
+            removed = combinations.pop(0)  # to remove all zeroes
+            # print(f"removed: {removed}")
+            cls.OFFSETS_AROUND[ndims] = [cls(xs) for xs in combinations]
+        return cls.OFFSETS_AROUND[ndims]
+
+    def __init__(self, *args):
+        if isinstance(args[0], Iterable):
+            self.values = tuple(args[0])
+        else:
+            self.values = tuple(args)
+
+    def __iter__(self):
+        return iter(self.values)
+
+    def __getitem__(self, pos: int) -> int:
+        return self.values[pos]
+
+    def __len__(self) -> int:
+        return len(self.values)
+
+    def __eq__(self, other):
+        return (len(self) == len(other)
+                and all(v1 == v2 for v1, v2 in zip(self, other)))
+
+    def __hash__(self):
+        return hash(tuple(self.values))
+
+    def __add__(self, other):
+        assert len(self) == len(other), "Mismatching dimensions"
+        return self.__class__([v1+v2 for v1, v2 in zip(self, other)])
+
+    def __str__(self):
+        return ",".join([str(v) for v in self.values])
+
+    def neighbours(self):
+        coords = []
+        for offset in self.offsets_around(len(self)):
+            coords.append(self + offset)
+        return coords
+
+
+class EnergySource(object):
     PIECE = Cube
 
-    # TODO: generate it based on the dimentionality
-    # move in under class Coord
-
-    OFFSETS_AROUND = [
-        (-1, 0, 0), (-1, +1, 0), (0, +1, 0), (+1, +1, 0),
-        (+1, 0, 0), (+1, -1, 0), (0, -1, 0), (-1, -1, 0),
-        (0,  0, -1),
-        (-1, 0, -1), (-1, +1, -1), (0, +1, -1), (+1, +1, -1),
-        (+1, 0, -1), (+1, -1, -1), (0, -1, -1), (-1, -1, -1),
-        (0,  0, +1),
-        (-1, 0, +1), (-1, +1, +1), (0, +1, +1), (+1, +1, +1),
-        (+1, 0, +1), (+1, -1, +1), (0, -1, +1), (-1, -1, +1)
-    ]
-
     @classmethod
-    def from_text(cls, text: str):
+    def from_text(cls, text: str, ndims=3):
         lines = [line.strip() for line in text.split('\n')]
         lines = [line for line in lines if line]
-        return cls.from_lines(lines)
+        return cls.from_lines(lines, ndims)
 
     @classmethod
-    def from_lines(cls, lines: List[str]):
+    def from_lines(cls, lines: List[str], ndims=3):
         board = cls()
-        z = 0
         for x, line in enumerate(lines):
             for y, char in enumerate(line):
                 piece = cls.PIECE(char)
-                piece.position = (x, y, z)
+                if ndims == 3:
+                    piece.position = Coord(x, y, 0)
+                elif ndims == 4:
+                    piece.position = Coord(x, y, 0, 0)
+                else:
+                    raise ValueError(
+                        f"Wrong values of ndims argument: {ndims}")
                 board.add(piece)
         return board
 
     def __init__(self):
         self.items = {}
-        self.extendable = True
+        self.expandable = False
 
-    def __getitem__(self, xyz: Tuple[int, int, int]) -> PIECE:
-        if xyz not in self.items and self.extendable:
+    def __getitem__(self, coord: Coord) -> PIECE:
+        item = self.items.get(coord, None)
+        if item is None and self.expandable:
             item = self.PIECE()
-            item.position = xyz
+            item.position = coord
             self.add(item)
-        return self.items.get(xyz, None)
+        return item
 
     def __setitem__(self, xyz, piece):
         assert isinstance(piece, self.PIECE), "Wrong type"
@@ -106,46 +158,42 @@ class EnergySource(object):  # TODO: rename to Board3D
         """Compute min and max values in every dimension
         Return: [(minx, maxx), (miny, maxy), (minz, maxz)]
         """
-        # TODO: make it insensitive to the number of dimensions
-        xs, ys, zs = [], [], []
-        for x, y, z in self.items.keys():
-            xs.append(x)
-            ys.append(y)
-            zs.append(z)
-        spans = [utils.minmax(xs), utils.minmax(ys), utils.minmax(zs)]
+        dims = None
+        for coord in self.items.keys():
+            if dims is None:
+                dims = [[] for _ in range(len(coord))]
+            for pos, val in enumerate(coord):
+                dims[pos].append(val)
+        spans = [utils.minmax(xs) for xs in dims]
         return spans
 
     def inflate(self):
         """Extend in every direction 1 layer on each side"""
+        # collect coordinates that are at any of the faces (either at edge
+        # or in the middle)
         spans = self.spans()
-        # collect coordinates that are at the edges
         edge_points = []
-        # TODO: make it insensitive to the number of dimensions
-        for x, y, z in self.items.keys():
-            if x in spans[0] or y in spans[1] or z in spans[1]:
-                edge_points.append((x,y,z))
-        # checking neighbors of the edge points has a side effect that new
-        # neighbors will be created.
-        for xyz in edge_points:
-            self.neighbours(xyz)
+        for coord in self.items.keys():
+            if any(x in spans[pos] for pos, x in enumerate(coord)):
+                edge_points.append(coord)
+        # Checking neighbors of the edge points will create missing neighbours.
+        oldvalue, self.expandable = self.expandable, True
+        for coord in edge_points:
+            self.neighbours(coord)
+        self.expandable = oldvalue
 
     def add(self, item: PIECE):
         assert isinstance(item, self.PIECE), "Wrong type"
         self[item.position] = item
 
     def neighbours(self, obj: Union[PIECE, tuple]) -> List[PIECE]:
-        # TODO: make it insensitive to the number of dimensions
-        # as the Coord class to provide the neighbours
-        #
-        offsets = self.OFFSETS_AROUND
         if isinstance(obj, self.PIECE):
-            x, y, z = obj.position
+            coord = obj.position
         else:
-            x, y, z = obj
+            coord = obj
         neighbours = []
-        for dx, dy, dz in offsets:
-            nxyz = (x + dx, y + dy, z + dz)  # implement coord + coord
-            neighbour = self[nxyz]
+        for ncoord in coord.neighbours():
+            neighbour = self[ncoord]
             if neighbour:
                 neighbours.append(neighbour)
         return neighbours
@@ -156,18 +204,18 @@ class EnergySource(object):  # TODO: rename to Board3D
     def __str__(self):
         # TODO: how to make it work for 4d case?
         lines = []
-        xs, ys, zs = self.spans()
+        spans = self.spans()
+        assert len(spans) == 3, "Can handle 3 dimensions only"
+        xs, ys, zs = spans
         for z in range(zs[0], zs[1]+1):
             lines.append(f"-- z={z} --")
             for x in range(xs[0], xs[1]+1):
-                cells = [str(self[(x,y,z)]) for y in range(ys[0], ys[1]+1)]
+                cells = [str(self[Coord(x, y, z)])
+                         for y in range(ys[0], ys[1]+1)]
                 line = "".join(cells)
                 lines.append(line)
         return "\n".join(lines)
 
-
-# If a cube is active and exactly 2 or 3 of its neighbors are also active, the cube remains active. Otherwise, the cube becomes inactive.
-# If a cube is inactive but exactly 3 of its neighbors are active, the cube becomes active. Otherwise, the cube remains inactive.
 
 def run_one_cycle(source: EnergySource):
     if DEBUG:
@@ -175,12 +223,15 @@ def run_one_cycle(source: EnergySource):
 
     source.inflate()
     if DEBUG:
+        print(f"Number cubes before inflation: {len(source.cubes())}")
+        print(" ++ inflated (1 layer added around) ++ ")
         print(source)
+        print(f"Number cubes after inflation: {len(source.cubes())}")
 
     actions = []
     for cube in source.cubes():
         c_active = sum([int(nc.is_active()) for nc in source.neighbours(cube)])
-        if cube.is_active() and c_active not in {2,3}:
+        if cube.is_active() and c_active not in {2, 3}:
             actions.append(deactivate(cube))
         elif cube.is_inactive() and c_active == 3:
             actions.append(activate(cube))
@@ -189,12 +240,11 @@ def run_one_cycle(source: EnergySource):
         action.execute()
 
     if DEBUG:
+        print(" ++ result of this cycle ++")
         print(source)
 
 
-def solve_p1(source: EnergySource) -> int:
-    """Solution to the 1st part of the challenge"""
-
+def solve(source: EnergySource) -> int:
     if DEBUG:
         print("--- Initial State ---")
         print(source)
@@ -211,10 +261,18 @@ def solve_p1(source: EnergySource) -> int:
     return c_active
 
 
+def solve_p1(lines: List[str]) -> int:
+    """Solution to the 1st part of the challenge"""
+    lines = [ln.strip() for ln in lines]
+    lines = [ln for ln in lines if ln]
+    source = EnergySource.from_lines(lines, 3)
+    return solve(source)
+
+
 def solve_p2(lines: List[str]) -> int:
     """Solution to the 2nd part of the challenge"""
-    # TODO
-    return 0
+    source = EnergySource.from_lines(lines, 4)
+    return solve(source)
 
 
 text_1 = """.#.
@@ -231,12 +289,14 @@ def run_tests():
     print("--- Tests ---")
 
     for tid, (inp, exp1, exp2) in enumerate(tests):
+        lines = inp.split('\n')
+
         if exp1 is not None:
-            res1 = solve_p1(EnergySource.from_text(inp))
+            res1 = solve_p1(lines)
             print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
         if exp2 is not None:
-            res2 = solve_p2(inp)
+            res2 = solve_p2(lines)
             print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
@@ -246,11 +306,11 @@ def run_real():
 
     print(f"--- Day {day} p.1 ---")
     exp1 = 359
-    res1 = solve_p1(EnergySource.from_lines(lines))
+    res1 = solve_p1(lines)
     print(exp1 == res1, exp1, res1)
 
     print(f"--- Day {day} p.2 ---")
-    exp2 = -1
+    exp2 = 2228
     res2 = solve_p2(lines)
     print(exp2 == res2, exp2, res2)
 
