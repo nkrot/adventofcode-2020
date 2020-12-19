@@ -2,18 +2,21 @@
 
 # # #
 #
+# TODO
+# CNF, CYK parser (bottom up?) and pushdown automaton
 #
 
 import re
 import os
 import sys
-from typing import List
+from typing import List, Optional
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
 
 
 DEBUG = False
+
 
 def read_rules_and_messages(lines: List[str]) -> List[List[str]]:
     sections = [[]]
@@ -32,7 +35,7 @@ class Parser(object):
     # 3: 4 5 | 5 4
     # 4: "a"
     @classmethod
-    def from_lines(cls, lines: List[str]):
+    def from_lines(cls, lines: List[str]) -> 'Parser':
         rules = {}
         for line in lines:
             line = line.strip()
@@ -61,14 +64,13 @@ class Parser(object):
     def __init__(self, rules):
         self.rules = rules
 
-    def is_valid(self, text: str):
-        """ababbb"""
+    def is_valid(self, text: str) -> bool:
+        """Check if given text string <text> can be fully described by
+        the parsing rules.
+        """
         self.sequence = self.Input(text)
-        if DEBUG:
-            print(repr(self.sequence))
 
         matches = self.match_rule(0, 0)
-
         full_matches = [m for m in matches if m.end == len(self.sequence)]
 
         if DEBUG:
@@ -78,11 +80,13 @@ class Parser(object):
 
         return len(full_matches) > 0
 
-    def match_rule(self, rule_id, offset):
-        """Check that rule <rule_id> matches <self.sequence> starting
-        at the offset <offset>
-        Return: Match object with relevant offsets that cover the whole
-        matched sequence.
+    def match_rule(self, rule_id, offset: int) -> List['Match']:
+        """Check that rule <rule_id> matches <self.sequence> starting at the
+        offset <offset>.
+        Return:
+          List[Match], can be empty.
+        TODO: for now, only end offset is correct. will fix the start offset
+        when necessary.
         """
         matches = []
 
@@ -108,7 +112,7 @@ class Parser(object):
             submatches = [self.Match(True, 0, offset)]
             for term in rule:
                 for _ in range(len(submatches)):
-                    # continue matching
+                    # continue matching after successful matches
                     subm = submatches.pop(0)
                     subms = self.match_rule(term, subm.end)
                     if subms:
@@ -122,15 +126,13 @@ class Parser(object):
             print(len(matches), matches)
 
         return matches
-
-
     class Rule(object):
 
         @classmethod
-        def from_text(cls, text):
+        def from_text(cls, text: str) -> 'Rule':
             """Create a rule from RHS of the atomic (non OR) rule
-                3: 4 5       -> create a rule from 3 5
-                4: "a"       -> create a rule from "a"
+                3: 4 5       -> create a rule from 3 5 (NONTERMINAL)
+                4: "a"       -> create a rule from "a" (TERMINAL)
             """
             assert '|' not in text, \
                 f"Cannot parse compound rules: {text}"
@@ -144,32 +146,31 @@ class Parser(object):
 
         def __init__(self):
             self.literal = None
-            self.id = None   # int or Tuple[int,int] index in the collection of all rules
-            self.subrules = []  # subrule1_id | subrule2_id ...
+            self.id = None      # int or Tuple[int, int]
+            self.subrules = []  # [subrule1_id, subrule2_id, ...]
             self.terms = []     # [3, 2] from "1: 3 2"
 
         def __eq__(self, other):
             return self.is_terminal() and self.literal == other
 
         def __len__(self):
-            assert self.is_terminal(), "Only terminal rules have length"
+            assert self.is_terminal(), "Only terminal symbols have length"
             return len(self.literal)
 
         def __iter__(self):
             return iter(self.terms)
 
-        def is_terminal(self):
+        def is_terminal(self) -> bool:
             return (self.literal is not None)
 
-        def is_compound(self):
+        def is_compound(self) -> bool:
             """Return True of the rule has several parts separated by |"""
             return len(self.subrules) > 0
 
         def __repr__(self):
             val = self.literal or self.terms
-            return "<{} {}: {} {}>".format(self.__class__.__name__,
-                                        str(self.id),
-                                        self._type(), str(val))
+            return "<{} {}: {} {}>".format(
+                self.__class__.__name__, str(self.id), self._type(), str(val))
 
         def _type(self):
             if self.is_terminal():
@@ -201,7 +202,7 @@ class Parser(object):
         def __len__(self):
             return len(self.data)
 
-        def __getitem__(self, start, length=1):
+        def __getitem__(self, start, length=1) -> Optional[str]:
             if isinstance(start, tuple):
                 start, length = start
             end = start + length
@@ -246,7 +247,10 @@ def solve_p1(lines: List[str]) -> int:
 
 def solve_p2(lines: List[str]) -> int:
     """Solution to the 2nd part of the challenge"""
-    patch = ["8: 42 | 42 8", "11: 42 31 | 42 11 31"]
+    patch = [
+        "8: 42 | 42 8",
+        "11: 42 31 | 42 11 31"
+    ]
 
     lines = [line for line in lines if not re.match(r'(8|11):', line) ]
     patch.extend(lines)
