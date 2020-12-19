@@ -1,6 +1,9 @@
 --- Tests ---
 T1.0: True 2 2
+T1.1: True 3 3
+T2.1: True 12 12
+T1.2: True 12 12
 --- Day 19 p.1 ---
 True 107 107
 --- Day 19 p.2 ---
-False -1 0
+True 321 321

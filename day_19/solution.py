@@ -246,8 +246,12 @@ def solve_p1(lines: List[str]) -> int:
 
 def solve_p2(lines: List[str]) -> int:
     """Solution to the 2nd part of the challenge"""
-    # TODO
-    return 0
+    patch = ["8: 42 | 42 8", "11: 42 31 | 42 11 31"]
+
+    lines = [line for line in lines if not re.match(r'(8|11):', line) ]
+    patch.extend(lines)
+
+    return solve_p1(patch)
 
 
 text_1 = """0: 4 1 5
@@ -266,6 +270,9 @@ aaaabbb"""
 
 tests = [
     (text_1.split('\n'), 2, None),
+    (utils.load_input("test_input.0.txt"), 3, 12),
+    # test_input.0.txt with manually replaced rules 8 and 11
+    (utils.load_input("test_input.1.txt"), 12, None),
 ]
 
 
@@ -292,7 +299,7 @@ def run_real():
     print(exp1 == res1, exp1, res1)
 
     print(f"--- Day {day} p.2 ---")
-    exp2 = -1
+    exp2 = 321
     res2 = solve_p2(lines)
     print(exp2 == res2, exp2, res2)
 
