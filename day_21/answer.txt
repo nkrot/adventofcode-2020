@@ -1,0 +1,7 @@
+--- Tests ---
+T1.0: True 5 5
+T2.0: True mxmxvkd,sqjhc,fvjkl mxmxvkd,sqjhc,fvjkl
+--- Day 21 p.1 ---
+True 2374 2374
+--- Day 21 p.2 ---
+True fbtqkzc,jbbsjh,cpttmnv,ccrbr,tdmqcl,vnjxjg,nlph,mzqjxq fbtqkzc,jbbsjh,cpttmnv,ccrbr,tdmqcl,vnjxjg,nlph,mzqjxq
