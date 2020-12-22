@@ -4,7 +4,6 @@
 #
 #
 
-import re
 import os
 import sys
 from typing import List
@@ -37,11 +36,12 @@ def winner_in_combat(c1, c2):
 
 
 def play_combat_game(player1, player2):
+
     while player1 and player2:
         c1 = player1.pop(0)
         c2 = player2.pop(0)
-        wid = winner_in_combat(c1, c2)
-        if wid == 1:
+        winner = winner_in_combat(c1, c2)
+        if winner == 1:
             player1.extend([c1, c2])
         else:
             player2.extend([c2, c1])
@@ -64,11 +64,20 @@ def play_recursive_combat_game(player1, player2, level=0):
 
     gamelog = [[], []]
 
+    def state_seen_before():
+        return is_in_log(gamelog, player1, player2)
+
+    def record_state():
+        return add_to_log(gamelog, player1, player2)
+
+    def lets_play_subgame():
+        return len(player1) >= c1 and len(player2) >= c2
+
     while player1 and player2:
         if DEBUG:
             show_state(player1, player2, level)
 
-        if seen(gamelog, player1, player2):
+        if state_seen_before():
             winner = 1
             if DEBUG:
                 print(f"Bad idea. Player {winner} wins")
@@ -76,9 +85,9 @@ def play_recursive_combat_game(player1, player2, level=0):
 
         c1, c2 = player1.pop(0), player2.pop(0)
 
-        if len(player1) >= c1 and len(player2) >= c2:
+        if lets_play_subgame():
             winner = play_recursive_combat_game(
-                list(player1[:c1]), list(player2[:c2]), level+1)
+                player1[:c1], player2[:c2], level+1)
         else:
             winner = winner_in_combat(c1, c2)
 
@@ -87,12 +96,12 @@ def play_recursive_combat_game(player1, player2, level=0):
         else:
             player2.extend([c2, c1])
 
-        memoize(gamelog, player1, player2)
+        record_state()
 
     return winner
 
 
-def seen(memory, player1, player2):
+def is_in_log(memory, player1, player2):
     p1, p2 = tuple(player1), tuple(player2)
     if DEBUG:
         print("Checking {} in: {}".format(p1, memory[0]))
@@ -100,7 +109,7 @@ def seen(memory, player1, player2):
     return (p1 in memory[0][:-1]) or (p2 in memory[1][:-1])
 
 
-def memoize(memory, player1, player2):
+def add_to_log(memory, player1, player2):
     memory[0].append(tuple(player1))
     memory[1].append(tuple(player2))
 
