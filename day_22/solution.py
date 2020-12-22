@@ -2,7 +2,9 @@
 
 # # #
 #
-#
+# in part 2:
+# it is sufficient to record the states of one player, because
+# the states of the other are implied.
 
 import os
 import sys
