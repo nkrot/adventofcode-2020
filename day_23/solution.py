@@ -18,23 +18,21 @@ DEBUG = False
 
 
 def play_one_round(cups, curridx=0):
-    # print(cups)
+    # print("Cups", cups)
+    n_out = 3
 
     curr = cups.pop(0)
     taken = []
-    for _ in range(3):
+    for _ in range(n_out):
         taken.append(cups.pop(0))
-    # print(taken)
+    # print("Taken:", taken)
+    # print("cups shortened:", cups)
 
     # find destination cup
-    dest, destidx = curr, None
-    while dest > -1:
-        dest -= 1
-        try:
+    destidx = None
+    for dest in range(curr-1, max(curr-2-n_out, 0), -1):
+        if dest not in taken:
             destidx = cups.index(dest)
-        except ValueError:
-            pass
-        if destidx is not None:
             break
 
     if destidx is None:
@@ -67,6 +65,8 @@ def solve_p1(line, n_moves=100) -> str:
 
 def solve_p2(line, n_moves=10000000) -> int:
     """Solution to the 2nd part of the challenge"""
+    return 0
+
     print("This algorithm will take a day to complete")
 
     size = 1000000
@@ -92,7 +92,7 @@ def solve_p2(line, n_moves=10000000) -> int:
 
 
 tests = [
-    # ("389125467", "92658374", None),  # 10 moves
+    ("389125467", "92658374", None),  # 10 moves
     ("389125467", "67384529", None),  # 100 moves
     ("389125467", None, 934001 * 159792)  # 10 mln moves
 ]
@@ -102,8 +102,9 @@ def run_tests():
     print("--- Tests ---")
 
     for tid, (inp, exp1, exp2) in enumerate(tests):
+        n_moves = 10 if tid == 0 else 100
         if exp1 is not None:
-            res1 = solve_p1(inp)
+            res1 = solve_p1(inp, n_moves)
             print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
         if exp2 is not None:
