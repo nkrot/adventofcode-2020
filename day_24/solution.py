@@ -7,7 +7,7 @@
 import re
 import os
 import sys
-from typing import List
+from typing import List, Union
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
@@ -42,6 +42,12 @@ class Tile(object):
                 k = self.x % 2
             dy = self.OFFSETS[c] * k
         return (self.x + dx, self.y + dy)
+
+    def is_black(self):
+        return self.state == 1
+
+    def is_white(self):
+        return self.state == 0
 
     @property
     def state(self):
@@ -118,9 +124,44 @@ def find_tile(path: tuple) -> Tile:
     return tile
 
 
-# def flip_tiles(paths: List[tuple]) -> List[Tile]:
-#     tiles = []
-#     return tiles
+
+def flip_tiles(tiles: dict) -> None:
+
+    flippable = []
+
+    # first check rule 1 and create new surrounding white tiles
+    # Any black tile with zero or more than 2 black tiles immediately adjacent to it is flipped to white.
+    for pos in list(tiles.keys()):
+        tile = tiles[pos]
+
+        if tile.is_black():
+            neighbours = []
+            for d in tile.DIRECTIONS:
+                xy = tile.neighbour(d)
+                neigh = tiles.setdefault(xy, Tile(xy))
+                neighbours.append(neigh)
+            n_blacks = count_black_tiles(neighbours)
+            if n_blacks == 0 or n_blacks > 2:
+                flippable.append(tile)
+
+    # Any white tile with exactly 2 black tiles immediately adjacent to it is flipped to black.
+    for pos, tile in tiles.items():
+        if tile.is_white():
+            neighbours = []
+            for d in tile.DIRECTIONS:
+                xy = tile.neighbour(d)
+                if xy in tiles:
+                    neighbours.append(tiles[xy])
+            n_blacks = count_black_tiles(neighbours)
+            if n_blacks == 2:
+                flippable.append(tile)
+
+    # TODO: what if a tile matches both above conditions?
+
+    for tile in flippable:
+        tile.flip()
+
+    pass
 
 
 def demo_find_tile():
@@ -133,7 +174,14 @@ def demo_find_tile():
 #exit(100)
 
 
-def solve_p1(lines: List[str]) -> int:
+def count_black_tiles(tiles: Union[dict, list]) -> int:
+    if isinstance(tiles, dict):
+        return sum(t.is_black() for t in tiles.values())
+    else:
+        return sum(t.is_black() for t in tiles)
+
+
+def solve_p1(lines: List[str], do_part=1) -> int:
     """Solution to the 1st part of the challenge"""
     paths = [parse_line(line) for line in lines]
 
@@ -148,13 +196,24 @@ def solve_p1(lines: List[str]) -> int:
         for tile in tiles.values():
             print(tile)
 
-    return sum(t.state for t in tiles.values())
+    if do_part == 1:
+        return count_black_tiles(tiles)
+    else:
+        return tiles
 
 
-def solve_p2(lines: List[str]) -> int:
+def solve_p2(lines: List[str], n_days=100) -> int:
     """Solution to the 2nd part of the challenge"""
-    # TODO
-    return 0
+
+    tiles = solve_p1(lines, do_part=2)
+
+    for n in range(n_days):
+        flip_tiles(tiles)
+        cnt = count_black_tiles(tiles)
+        if DEBUG:
+            print(f"Day {n+1}: {cnt}")
+
+    return cnt
 
 
 text_1 = """sesenwnenenewseeswwswswwnenewsewsw
@@ -180,7 +239,7 @@ wseweeenwnesenwwwswnew"""
 
 
 tests = [
-    (text_1.split('\n'), 10+5-5, None),
+    (text_1.split('\n'), 10+5-5, 2208),
 ]
 
 
@@ -193,7 +252,7 @@ def run_tests():
             print(f"T1.{tid}:", res1 == exp1, exp1, res1)
 
         if exp2 is not None:
-            res2 = solve_p2(inp)
+            res2 = solve_p2(inp, n_days=100)
             print(f"T2.{tid}:", res2 == exp2, exp2, res2)
 
 
@@ -207,7 +266,7 @@ def run_real():
     print(exp1 == res1, exp1, res1)
 
     print(f"--- Day {day} p.2 ---")
-    exp2 = -1
+    exp2 = 4206
     res2 = solve_p2(lines)
     print(exp2 == res2, exp2, res2)
 
