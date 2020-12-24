@@ -4,6 +4,13 @@
 #
 # https://www.redblobgames.com/grids/hexagons/
 #
+#
+# | B |   | B |
+#  \ / \ / \ /
+#   | B |   |
+#  / \ / \ / \
+# | B | B |   |
+#
 
 import re
 import os
@@ -14,7 +21,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from aoc import utils
 
 
-DEBUG = not True
+DEBUG = False
+DO_PLOT = True
 
 
 class Tile(object):
@@ -182,6 +190,36 @@ def count_black_tiles(tiles: Union[dict, list]) -> int:
         return sum(t.is_black() for t in tiles)
 
 
+def plot(tiles):
+    xs, ys = [], []
+    for (x, y) in tiles.keys():
+        xs.append(x)
+        ys.append(y)
+    xspan = utils.minmax(xs)
+    yspan = utils.minmax(ys)
+
+    xspan = (xspan[0], xspan[1]+1)
+    yspan = (yspan[0], yspan[1]+1)
+
+    ywidth = (yspan[1] - yspan[0])
+    stripes = [ ' \ /'  * ywidth + ' \\', ' / \\' * ywidth + ' /' ]
+    indents = ["| ", "  | "]
+
+    print(stripes[1])
+    for i, x in enumerate(range(xspan[0], xspan[1])):
+        row = []
+        for y in range(yspan[0], yspan[1]):
+            xy = (x, y)
+            tile = tiles.get(xy, Tile(xy))
+            ch = 'B' if tile.is_black() else ' '
+            row.append(ch)
+        print(indents[i%2] + " | ".join(row) + " |")
+        #if x+1 < xspan[1]:
+        print(stripes[i%2])
+
+    pass
+
+
 def solve_p1(lines: List[str], do_part=1) -> int:
     """Solution to the 1st part of the challenge"""
     paths = [parse_line(line) for line in lines]
@@ -198,6 +236,8 @@ def solve_p1(lines: List[str], do_part=1) -> int:
             print(tile)
 
     if do_part == 1:
+        if DO_PLOT:
+            plot(tiles)
         return count_black_tiles(tiles)
     else:
         return tiles
@@ -211,8 +251,14 @@ def solve_p2(lines: List[str], n_days=100) -> int:
     for n in range(n_days):
         flip_tiles(tiles)
         cnt = count_black_tiles(tiles)
+
         if DEBUG:
             print(f"Day {n+1}: {cnt}")
+        if DO_PLOT and n < 20:  # with larger n does not fit into term width
+            if not DEBUG:
+                print(f"Day {n+1}: {cnt}")
+            plot(tiles)
+            print()
 
     return cnt
 
@@ -258,6 +304,9 @@ def run_tests():
 
 
 def run_real():
+    global DO_PLOT
+    DO_PLOT = False
+
     day = '24'
     lines = utils.load_input()
 
