@@ -60,6 +60,24 @@ class HexagonalCoord(object):
                     maxs[j] = max(maxs[j], v)
         return list(zip(mins, maxs))
 
+    def __iter__(self):
+        raise NotImplementedError("Subclass must implement __iter__()")
+
+    def __eq__(self, other):
+        return list(self) == list(other)
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+    def __str__(self):
+        return str(tuple(self))
+
+    def __add__(self, other):
+        if not isinstance(other, (type(self), tuple, list)):
+            raise ValueError(f"Unsupported type: {type(other)}")
+        args = [sum(vs) for vs in zip(list(self), list(other))]
+        return self.__class__(*args)
+
 
 class EvenRCoord(HexagonalCoord):
     """Even-rows system as explained in the article
@@ -68,27 +86,15 @@ class EvenRCoord(HexagonalCoord):
 
     OFFSETS = { 'n': -1, 's': +1, 'w': -1, 'e': +1 }
 
+    @classmethod
+    def origin(cls):
+        return cls(0, 0)
+
     def __init__(self, *args):
         self.x, self.y = args
 
     def __iter__(self):
         return iter([self.x, self.y])
-
-    def __str__(self):
-        return str((self.x, self.y))
-
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
-
-    def __hash__(self):
-        return hash((self.x, self.y))
-
-    def __add__(self, other):
-        if isinstance(other, (type(self), tuple, list)):
-            dx, dy = other
-        else:
-            raise ValueError(f"Unsupported type: {type(other)}")
-        return self.__class__(self.x + dx, self.y + dy)
 
     def neighbour(self, direction):
         """Return the coordinate that is located in the given <direction> with
@@ -148,7 +154,6 @@ class Tile(object):
 
     @property
     def position(self):
-        # return (self.x, self.y)
         return self.coord
 
     def flip(self):
@@ -189,10 +194,11 @@ def demo_coord():
         print("..found 1")
 
     if COORD(x, y) in tiles:
-        print(".. found 2")
+        print("..found 2")
     else:
         raise RuntimeError("OOps. This should not happen")
 
+    print("Demo Coord + Coord:")
     a = xy + xy
     print(type(a), a)
     b = xy + (10, 2)
