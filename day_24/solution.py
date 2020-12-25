@@ -6,8 +6,9 @@
 #   https://www.redblobgames.com/grids/hexagons/
 #
 # This script implements
-# - EvenRCoord (supports plotting)
+# - EvenRCoord (supports plotting). A sort of offset coordinates
 # - CubeCoord
+# - AxialCoord
 # A specific implementation can be chosen by setting COORD variable to one
 # of the above classes.
 #
@@ -40,6 +41,7 @@ DO_PLOT = not True
 class HexagonalCoord(object):
 
     DIRECTIONS = ['w', 'e', 'ne', 'nw', 'se', 'sw']
+    OFFSETS = {}  # a subclass must define a valid map
 
     @classmethod
     def parse_directions(cls, line: str) -> List[str]:
@@ -90,6 +92,14 @@ class HexagonalCoord(object):
         args = [sum(vs) for vs in zip(list(self), list(other))]
         return self.__class__(*args)
 
+    def neighbour(self, direction):
+        """Return the coordinate that is located in the given <direction> with
+        respect to the current coordinate.
+        """
+        assert direction in self.DIRECTIONS, \
+            f"Invalid neighbour direction: {direction}"
+        return self + self.OFFSETS[direction]
+
 
 class EvenRCoord(HexagonalCoord):
     """Even-rows system as explained in the article
@@ -111,6 +121,8 @@ class EvenRCoord(HexagonalCoord):
     def neighbour(self, direction):
         """Return the coordinate that is located in the given <direction> with
         respect to the current coordinate.
+        TODO: here an easier and nicer method
+        https://www.redblobgames.com/grids/hexagons/#neighbors-offset
         """
         assert direction in self.DIRECTIONS, \
             f"Invalid neighbour direction: {direction}"
@@ -146,13 +158,26 @@ class CubeCoord(HexagonalCoord):
     def __iter__(self):
         return iter([self.x, self.y, self.z])
 
-    def neighbour(self, direction):
-        """Return the coordinate that is located in the given <direction> with
-        respect to the current coordinate.
-        """
-        assert direction in self.DIRECTIONS, \
-            f"Invalid neighbour direction: {direction}"
-        return self + self.OFFSETS[direction]
+
+class AxialCoord(HexagonalCoord):
+    # the colum is skewed and goes diagonally from top left to bottom right
+
+    OFFSETS = {
+        # row, column
+        "w"  : (0, -1),  "e"  : (0, +1),
+        "nw" : (-1, 0),  "se" : (+1, 0),
+        "ne" : (-1, +1), "sw" : (+1, -1),
+    }
+
+    @classmethod
+    def origin(cls):
+        return cls(0, 0)
+
+    def __init__(self, *args):
+        self.x, self.y = args
+
+    def __iter__(self):
+        return iter([self.x, self.y])
 
 
 class Tile(object):
@@ -203,8 +228,9 @@ class Tile(object):
             self.states)
 
 
-#COORD = EvenRCoord
-COORD = CubeCoord
+# COORD = EvenRCoord
+# COORD = CubeCoord
+COORD = AxialCoord
 
 
 def demo_coord():
