@@ -2,14 +2,26 @@
 
 # # #
 #
-# https://www.redblobgames.com/grids/hexagons/
+# Useful reading on how to implement coordinates in hexagonal grids:
+#   https://www.redblobgames.com/grids/hexagons/
 #
+# This script implements
+# - EvenRCoord (supports plotting)
+# - CubeCoord
+# A specific implementation can be chosen by setting COORD variable to one
+# of the above classes.
 #
+# Plotting
+# ========
+# Supported for EvenRCoord only.
+#
+#  / \ / \ / \
 # | B |   | B |
 #  \ / \ / \ /
 #   | B |   |
 #  / \ / \ / \
 # | B | B |   |
+#  \ / \ / \ /
 #
 
 import re
@@ -22,7 +34,7 @@ from aoc import utils
 
 
 DEBUG = False
-DO_PLOT = True
+DO_PLOT = not True
 
 
 class HexagonalCoord(object):
@@ -116,7 +128,31 @@ class EvenRCoord(HexagonalCoord):
         return self + (dx, dy)
 
 
-COORD = EvenRCoord
+class CubeCoord(HexagonalCoord):
+
+    OFFSETS = {
+        "w"  : (-1, +1, 0), "e"  : (+1, -1, 0),
+        "nw" : (0, +1, -1), "se" : (0, -1, +1),
+        "ne" : (+1, 0, -1), "sw" : (-1, 0, +1),
+    }
+
+    @classmethod
+    def origin(cls):
+        return cls(0, 0, 0)
+
+    def __init__(self, *args):
+        self.x, self.y, self.z = args
+
+    def __iter__(self):
+        return iter([self.x, self.y, self.z])
+
+    def neighbour(self, direction):
+        """Return the coordinate that is located in the given <direction> with
+        respect to the current coordinate.
+        """
+        assert direction in self.DIRECTIONS, \
+            f"Invalid neighbour direction: {direction}"
+        return self + self.OFFSETS[direction]
 
 
 class Tile(object):
@@ -167,18 +203,12 @@ class Tile(object):
             self.states)
 
 
-def demo_tile():
-    t = Tile(COORD(0, 0))
-    print(t)
-    for _ in range(2):
-        t.flip()
-        print(t)
+#COORD = EvenRCoord
+COORD = CubeCoord
 
-
-# demo_tile()
-# exit(100)
 
 def demo_coord():
+    # works for EvenRCoord, does not work for CubeCoord
     x, y = 0, 1
 
     xy = COORD(x, y)
@@ -210,7 +240,16 @@ def demo_coord():
     # print(type(d), d)
 
 
+def demo_tile():
+    t = Tile(COORD.origin())
+    print(t)
+    for _ in range(2):
+        t.flip()
+        print(t)
+
+
 # demo_coord()
+# demo_tile()
 # exit(100)
 
 
@@ -222,7 +261,7 @@ def find_tile(path: tuple) -> Tile:
 
     tiles = {}
 
-    xy = COORD(0, 0)
+    xy = COORD.origin()
     tile = tiles.setdefault(xy, Tile(xy))
 
     if DEBUG:
