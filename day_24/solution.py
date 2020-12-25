@@ -9,6 +9,7 @@
 # - EvenRCoord (supports plotting). A sort of offset coordinates
 # - CubeCoord
 # - AxialCoord
+# - DoubledCoord
 # A specific implementation can be chosen by setting COORD variable to one
 # of the above classes.
 #
@@ -160,12 +161,33 @@ class CubeCoord(HexagonalCoord):
 
 
 class AxialCoord(HexagonalCoord):
-    # the colum is skewed and goes diagonally from top left to bottom right
+    # the column is skewed and goes diagonally from top left to bottom right
 
     OFFSETS = {
         # row, column
         "w"  : (0, -1),  "e"  : (0, +1),
         "nw" : (-1, 0),  "se" : (+1, 0),
+        "ne" : (-1, +1), "sw" : (+1, -1),
+    }
+
+    @classmethod
+    def origin(cls):
+        return cls(0, 0)
+
+    def __init__(self, *args):
+        self.x, self.y = args
+
+    def __iter__(self):
+        return iter([self.x, self.y])
+
+
+class DoubledCoord(HexagonalCoord):
+    # the step in a row is 2 (instead of 1).
+
+    OFFSETS = {
+        # row, column
+        "w"  : (0, -2),  "e"  : (0, +2),
+        "nw" : (-1, -1), "se" : (+1, +1),
         "ne" : (-1, +1), "sw" : (+1, -1),
     }
 
@@ -230,7 +252,8 @@ class Tile(object):
 
 # COORD = EvenRCoord
 # COORD = CubeCoord
-COORD = AxialCoord
+# COORD = AxialCoord
+COORD = DoubledCoord
 
 
 def demo_coord():
