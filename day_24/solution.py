@@ -25,24 +25,81 @@ DEBUG = False
 DO_PLOT = True
 
 
-class Tile(object):
+class HexagonalCoord(object):
 
-    DIRECTIONS = [ 'w', 'e', 'ne', 'nw', 'se', 'sw']
+    DIRECTIONS = ['w', 'e', 'ne', 'nw', 'se', 'sw']
+
+    @classmethod
+    def parse_directions(cls, line: str) -> List[str]:
+        line = line.strip()
+        reg = r'({})'.format("|".join(cls.DIRECTIONS))
+        tokens = re.findall(reg, line)
+        assert line == "".join(tokens), \
+            "Parser line does not correspond to the input line"
+        return tokens
+
+    def neighbours(self):
+        for d in self.DIRECTIONS:
+            yield(self.neighbour(d))
+
+    @staticmethod
+    def spans(coords: list) -> List[list]:
+        """Inspect given list of coordinates and return spans for every
+        dimension. A span is two values [min, max] -- minimal and maximal value
+        in a dimension.
+        """
+        mins, maxs = [], []
+        for i, coord in enumerate(coords):
+            if i == 0:
+                for v in coord:
+                    mins.append(v)
+                    maxs.append(v)
+            else:
+                for j, v in enumerate(coord):
+                    mins[j] = min(mins[j], v)
+                    maxs[j] = max(maxs[j], v)
+        return list(zip(mins, maxs))
+
+
+class EvenRCoord(HexagonalCoord):
+    """Even-rows system as explained in the article
+    https://www.redblobgames.com/grids/hexagons/
+    """
+
     OFFSETS = { 'n': -1, 's': +1, 'w': -1, 'e': +1 }
 
-    STATES = ['white', 'black']
+    def __init__(self, *args):
+        self.x, self.y = args
 
-    def __init__(self, xy, state=0):
-        self.x, self.y = xy
-        self.states = []  # history of states
-        self.state = state
+    def __iter__(self):
+        return iter([self.x, self.y])
 
-    def neighbour(self, code):
-        assert code in self.DIRECTIONS, f"Invalid neighbour: {code}"
-        if code in 'we':
-            dx, dy = 0, self.OFFSETS[code]
+    def __str__(self):
+        return str((self.x, self.y))
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __hash__(self):
+        return hash((self.x, self.y))
+
+    def __add__(self, other):
+        if isinstance(other, (type(self), tuple, list)):
+            dx, dy = other
         else:
-            r, c = list(code)
+            raise ValueError(f"Unsupported type: {type(other)}")
+        return self.__class__(self.x + dx, self.y + dy)
+
+    def neighbour(self, direction):
+        """Return the coordinate that is located in the given <direction> with
+        respect to the current coordinate.
+        """
+        assert direction in self.DIRECTIONS, \
+            f"Invalid neighbour direction: {direction}"
+        if direction in 'we':
+            dx, dy = 0, self.OFFSETS[direction]
+        else:
+            r, c = list(direction)
             dx = self.OFFSETS[r]
             if c == 'w':
                 # k must be 1 in even rows and 0 otherwise
@@ -50,7 +107,29 @@ class Tile(object):
             if c == 'e':
                 k = self.x % 2
             dy = self.OFFSETS[c] * k
-        return (self.x + dx, self.y + dy)
+        return self + (dx, dy)
+
+
+COORD = EvenRCoord
+
+
+class Tile(object):
+
+    STATES = ['white', 'black']
+
+    def __init__(self, coord, state=0):
+        self.coord = coord
+        self.states = []  # history of states
+        self.state = state
+
+    # def neighbours(self):
+    #     """Return all exisiting neighbouring (adjacent) tiles"""
+    #     pass
+
+    # def neighbour(self, direction):
+    #     """Return the tile that is in the given direction from the current tile
+    #     """
+    #     pass
 
     def is_black(self):
         return self.state == 1
@@ -69,14 +148,12 @@ class Tile(object):
 
     @property
     def position(self):
-        return (self.x, self.y)
+        # return (self.x, self.y)
+        return self.coord
 
     def flip(self):
         self.state = (self.state + 1) % 2
         return self
-
-    # def __hash__(self):
-    #     return self.position
 
     def __repr__(self):
         return "<{}: {} state={} ({}) history={}>".format(
@@ -85,26 +162,50 @@ class Tile(object):
             self.states)
 
 
-def parse_line(line: str) -> tuple:
-    line = str(line)
-    tokens = []
-    while line:
-        for l in (2, 1, 0):
-            assert l > 0, f"Wrong code of len {l} at the beginning: {line}"
-            if line[:l] in Tile.DIRECTIONS:
-                tokens.append(line[:l])
-                line = line[l:]
-                break
-
-    return tuple(tokens)
-
-
 def demo_tile():
-    t = Tile((0, 0))
+    t = Tile(COORD(0, 0))
     print(t)
     for _ in range(2):
         t.flip()
         print(t)
+
+
+# demo_tile()
+# exit(100)
+
+def demo_coord():
+    x, y = 0, 1
+
+    xy = COORD(x, y)
+    print(xy, type(xy))
+    tile = Tile(xy)
+    print(tile)
+
+    tiles = {}
+    tiles[tile.position] = tile
+    print(tiles)
+
+    if xy in tiles:
+        print("..found 1")
+
+    if COORD(x, y) in tiles:
+        print(".. found 2")
+    else:
+        raise RuntimeError("OOps. This should not happen")
+
+    a = xy + xy
+    print(type(a), a)
+    b = xy + (10, 2)
+    print(type(b), b)
+    c = xy + [20, 1]
+    print(type(c), c)
+
+    # d = xy + [20, 1, 3]
+    # print(type(d), d)
+
+
+# demo_coord()
+# exit(100)
 
 
 def find_tile(path: tuple) -> Tile:
@@ -115,14 +216,14 @@ def find_tile(path: tuple) -> Tile:
 
     tiles = {}
 
-    xy = (0, 0)
+    xy = COORD(0, 0)
     tile = tiles.setdefault(xy, Tile(xy))
 
     if DEBUG:
         print(f"Startng tile: {tile}")
 
     for code in path:
-        xy = tile.neighbour(code)
+        xy = tile.coord.neighbour(code)
         tile = tiles.setdefault(xy, Tile(xy))
         if DEBUG:
             print(f"Current tile: {tile}")
@@ -138,27 +239,28 @@ def flip_tiles(tiles: dict) -> None:
 
     flippable = []
 
-    # first check rule 1 and create new surrounding white tiles
-    # Any black tile with zero or more than 2 black tiles immediately adjacent to it is flipped to white.
+    # Any black tile with zero or more than 2 black tiles immediately
+    # adjacent to it is flipped to white.
     for pos in list(tiles.keys()):
         tile = tiles[pos]
+        # print(pos, tile)
 
         if tile.is_black():
             neighbours = []
-            for d in tile.DIRECTIONS:
-                xy = tile.neighbour(d)
+            for xy in tile.coord.neighbours():
+                # create surrounding tile if does not exist
                 neigh = tiles.setdefault(xy, Tile(xy))
                 neighbours.append(neigh)
             n_blacks = count_black_tiles(neighbours)
             if n_blacks == 0 or n_blacks > 2:
                 flippable.append(tile)
 
-    # Any white tile with exactly 2 black tiles immediately adjacent to it is flipped to black.
+    # Any white tile with exactly 2 black tiles immediately adjacent to it
+    # is flipped to black.
     for pos, tile in tiles.items():
         if tile.is_white():
             neighbours = []
-            for d in tile.DIRECTIONS:
-                xy = tile.neighbour(d)
+            for xy in tile.coord.neighbours():
                 if xy in tiles:
                     neighbours.append(tiles[xy])
             n_blacks = count_black_tiles(neighbours)
@@ -174,13 +276,14 @@ def flip_tiles(tiles: dict) -> None:
 
 
 def demo_find_tile():
-    paths = [parse_line(line) for line in ["esew", "nwwswee"]]
+    paths = [COORD.parse_directions(line) for line in ["esew", "nwwswee"]]
     for path in paths:
         tile = find_tile(path)
+        print(tile)
 
 
-#demo_find_tile()
-#exit(100)
+# demo_find_tile()
+# exit(100)
 
 
 def count_black_tiles(tiles: Union[dict, list]) -> int:
@@ -191,12 +294,11 @@ def count_black_tiles(tiles: Union[dict, list]) -> int:
 
 
 def plot(tiles):
-    xs, ys = [], []
-    for (x, y) in tiles.keys():
-        xs.append(x)
-        ys.append(y)
-    xspan = utils.minmax(xs)
-    yspan = utils.minmax(ys)
+    tile = list(tiles.keys())[0]
+    assert isinstance(tile, EvenRCoord), \
+        f"Cannot plot coordinates of type {type(tile)}"
+
+    xspan, yspan = COORD.spans(tiles.keys())
 
     xspan = (xspan[0], xspan[1]+1)
     yspan = (yspan[0], yspan[1]+1)
@@ -209,7 +311,7 @@ def plot(tiles):
     for i, x in enumerate(range(xspan[0], xspan[1])):
         row = []
         for y in range(yspan[0], yspan[1]):
-            xy = (x, y)
+            xy = COORD(x, y)
             tile = tiles.get(xy, Tile(xy))
             ch = 'B' if tile.is_black() else ' '
             row.append(ch)
@@ -217,12 +319,10 @@ def plot(tiles):
         #if x+1 < xspan[1]:
         print(stripes[i%2])
 
-    pass
-
 
 def solve_p1(lines: List[str], do_part=1) -> int:
     """Solution to the 1st part of the challenge"""
-    paths = [parse_line(line) for line in lines]
+    paths = [COORD.parse_directions(line) for line in lines]
 
     tiles = {}
     for path in paths:
