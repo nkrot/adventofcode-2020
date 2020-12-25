@@ -7,13 +7,13 @@
 #
 # This script implements
 # - EvenRCoord (supports plotting). A sort of offset coordinates
-# - CubeCoord
-# - AxialCoord
-# - DoubledCoord
+# - CubeCoord (does not support plotting)
+# - AxialCoord (does not support plotting)
+# - DoubledCoord (does not suppoert plotting)
 # A specific implementation can be chosen by setting COORD variable to one
 # of the above classes.
 #
-# Plotting
+# Plotting (set DO_PLOT to enable)
 # ========
 # Supported for EvenRCoord only.
 #
@@ -125,8 +125,15 @@ class EvenRCoord(HexagonalCoord):
         TODO: here an easier and nicer method
         https://www.redblobgames.com/grids/hexagons/#neighbors-offset
         """
-        assert direction in self.DIRECTIONS, \
+        assert direction in self.DIRECTIONS + ['s', 'n'], \
             f"Invalid neighbour direction: {direction}"
+
+        if direction in 'ns':
+            # Special case to assist plotting:
+            # Coordinate N or S of the current one *in the same column*
+            direction = direction + ('e', 'w')[self.x % 2]
+            return self.neighbour(direction)
+
         if direction in 'we':
             dx, dy = 0, self.OFFSETS[direction]
         else:
@@ -250,10 +257,10 @@ class Tile(object):
             self.states)
 
 
-# COORD = EvenRCoord
+COORD = EvenRCoord
 # COORD = CubeCoord
 # COORD = AxialCoord
-COORD = DoubledCoord
+# COORD = DoubledCoord
 
 
 def demo_coord():
@@ -389,29 +396,42 @@ def count_black_tiles(tiles: Union[dict, list]) -> int:
 
 def plot(tiles):
     tile = list(tiles.keys())[0]
-    assert isinstance(tile, EvenRCoord), \
-        f"Cannot plot coordinates of type {type(tile)}"
+    if not isinstance(tile, EvenRCoord):
+        print(f"Cannot plot coordinates of type {type(tile)}")
+        return False
 
+    # TODO: ask for height and width from COORD. these values do not
+    # obligatorily come from xspan and yspan.
     xspan, yspan = COORD.spans(tiles.keys())
 
-    xspan = (xspan[0], xspan[1]+1)
-    yspan = (yspan[0], yspan[1]+1)
+    height = xspan[1] - xspan[0]
+    width = yspan[1] - yspan[0]
 
-    ywidth = (yspan[1] - yspan[0])
-    stripes = [ ' \ /'  * ywidth + ' \\', ' / \\' * ywidth + ' /' ]
+    stripes = [
+         ' \ /' * (1+width) + ' \\',
+        ' / \\' * (1+width) + ' /' ]
     indents = ["| ", "  | "]
 
+    def tile(coord, chars=['B', ' ']):
+        # chars is for debug purposes
+        t = tiles.get(coord, Tile(coord))
+        return chars[0] if t.is_black() else chars[1]
+
+    # top left corner in the grid
+    # TODO: ask COORD for top left corner of the grid
+    xy = COORD(xspan[0], yspan[0])
+
     print(stripes[1])
-    for i, x in enumerate(range(xspan[0], xspan[1])):
-        row = []
-        for y in range(yspan[0], yspan[1]):
-            xy = COORD(x, y)
-            tile = tiles.get(xy, Tile(xy))
-            ch = 'B' if tile.is_black() else ' '
-            row.append(ch)
-        print(indents[i%2] + " | ".join(row) + " |")
-        #if x+1 < xspan[1]:
-        print(stripes[i%2])
+    for r in range(height+1):
+        first_in_row = xy
+        row = [tile(xy)]
+        for _ in range(width):
+            xy = xy.neighbour("e")
+            row.append(tile(xy))
+        print("{}{} |".format(indents[r%2], " | ".join(row)))
+        print(stripes[r%2])
+        # get read for processing the next row
+        xy = first_in_row.neighbour('s')
 
 
 def solve_p1(lines: List[str], do_part=1) -> int:
