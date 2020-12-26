@@ -4,91 +4,180 @@
 #
 #
 
-import re
-import os
-import sys
-from typing import List
-from collections import deque
+#import os
+#import sys
+from typing import List, Union, Optional
+#from collections import deque
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from aoc import utils
+#sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+#from aoc import utils
 
 
 DEBUG = False
 
 
-def play_one_round(cups, curridx=0):
-    # print("Cups", cups)
-    n_out = 3
+class GameOfCups(object):
+    """ implemented as a dict
+    {
+        current : (prev,    next),
+        value_1 : (value_3  value_2),
+        value_2 : (value_2, value_3),
+        value_3 : (value_2, value_1)
+    }
 
-    curr = cups.pop(0)
-    taken = []
-    for _ in range(n_out):
-        taken.append(cups.pop(0))
-    # print("Taken:", taken)
-    # print("cups shortened:", cups)
+    Constraints:
+    Items are unique (not checked)
+    """
 
-    # find destination cup
-    destidx = None
-    for dest in range(curr-1, max(curr-2-n_out, 0), -1):
-        if dest not in taken:
-            destidx = cups.index(dest)
+    def __init__(self, items: Optional[List[int]] = None):
+        self.items = {}
+        self._last = None
+        self._first = None
+        self.removed = []  # temporarily removed items
+        self.maxvalue = 0  # global max value
+        if items:
+            for item in items:
+                self.append(item)
+
+    def lowest(self):
+        return 1
+
+    def highest(self) -> int:
+        maxval = self.maxvalue
+        while maxval in self.removed:
+            maxval -= 1
+        return maxval
+
+    @property
+    def first(self):
+        return self._first
+
+    @first.setter
+    def first(self, newval):
+        self._first = newval
+
+    def append(self, value: int):
+        if self.first is None:
+            self.first = value
+        if self._last is not None:
+            self.items[self._last] = value
+        self.items[value] = self.first
+        self._last = value
+        if value > self.maxvalue:
+            self.maxvalue = value
+
+    def pop3after(self, value: int) -> List[int]:
+        """Remove 3 items that immediately follow given item <value>"""
+        self.removed.clear()
+        nxt = self.items[value]
+        for _ in range(3):
+            self.removed.append(nxt)
+            nxt = self.items[nxt]
+        self.items[value] = nxt
+        return list(self.removed)
+
+    def insert(self, after: int, new_values: Union[int, List[int]]):
+        """Insert given value(s) <new_values> after the value <after>"""
+        if not isinstance(new_values, list):
+            new_values = [new_values]
+        for nval in new_values:
+            if nval in self.removed:
+                self.removed.remove(nval)
+            self.items[nval] = self.items[after]
+            self.items[after] = nval
+            after = nval
+
+    def __contains__(self, value: int) -> Optional[int]:
+        if value in self.items and value not in self.removed:
+            return value
+        return None
+
+    def after(self, value: int) -> int:
+        return self.items[value]
+
+    def listitems(self, start: Optional[int] = None) -> List[int]:
+        curr = start or self.first
+        # print(f"starting with: {curr}")
+        items = [curr]
+        nxt = self.after(curr)
+        while nxt != curr:
+            items.append(nxt)
+            nxt = self.after(nxt)
+        return items
+
+    def __repr__(self):
+        return "<{}: {} {} {}>".format(self.__class__.__name__,
+            (self.first,), self.highest(), self.listitems())
+
+
+def play_one_round(game: GameOfCups, current: int) -> int:
+    # print(game)
+
+    # The crab removes 3 cups immediately after the current cup
+    removed = game.pop3after(current)
+
+    # The crab finds a destination cup
+    found = False
+    dest = current
+    while dest >= game.lowest():
+        dest -= 1
+        if dest in game:
+            found = True
             break
+    if not found:
+        dest = game.highest()
 
-    if destidx is None:
-        dest = max(cups)
-        destidx = cups.index(dest)
+    # The crab inserts removed cups immediately after the destination cup
+    game.insert(dest, removed)
 
-    # print(destidx, dest)
+    # The crab selects a new current cup that is immediately after the current
+    # one.
+    current = game.after(current)
 
-    # place taken out cups after the destination cup
-    while taken:
-        cups.insert(destidx+1, taken.pop())
-
-    # print(cups)
-
-    cups.append(curr)
+    return current
 
 
 def solve_p1(line, n_moves=100) -> str:
     """Solution to the 1st part of the challenge"""
     cups = [int(ch) for ch in list(line)]
 
+    game = GameOfCups(cups)
+
+    current = game.first
     for n in range(n_moves):
-        play_one_round(cups)
+        current = play_one_round(game, current)
 
-    while cups[0] != 1:
-        cups.append(cups.pop(0))
+    cups = game.listitems(1)
+    cups.pop(0)
+    #print(cups)
 
-    return "".join(str(n) for n in cups[1:])
+    return "".join([str(n) for n in cups])
 
 
 def solve_p2(line, n_moves=10000000) -> int:
     """Solution to the 2nd part of the challenge"""
-    return 0
 
-    print("This algorithm will take a day to complete")
+    cups = [int(ch) for ch in list(line)]
+    game = GameOfCups(cups)
 
-    size = 1000000
-    cups = [0] * size
+    maxval = 1000000
+    for n in range(game.highest()+1, maxval+1):
+        game.append(n)
 
-    _cups = [int(ch) for ch in list(line)]
-    for idx, n in enumerate(_cups):
-        cups[idx] = n
+    print("Game has been setup")
 
-    n = max(cups)
-    for idx in range(len(line), size):
-        n += 1
-        cups[idx] = n
-
+    current = game.first
     for n in range(n_moves):
-        play_one_round(cups)
+        if n % 1000000 == 0:
+            print(f"..rounds played: {n}")
+        current = play_one_round(game, current)
 
-    idx = cups.index(1)
-    idx1 = idx+1 % size
-    idx2 = idx+2 % size
+    cup1 = game.after(1)
+    cup2 = game.after(cup1)
 
-    return cups[idx1] * cups[idx2]
+    #print(cup1, cup2)
+
+    return cup1 * cup2
 
 
 tests = [
@@ -114,7 +203,6 @@ def run_tests():
 
 def run_real():
     day = '23'
-    # lines = utils.load_input()
     inp = "598162734"
 
     print(f"--- Day {day} p.1 ---")
@@ -123,11 +211,11 @@ def run_real():
     print(exp1 == res1, exp1, res1)
 
     print(f"--- Day {day} p.2 ---")
-    exp2 = -1
+    exp2 = 683486010900
     res2 = solve_p2(inp)
     print(exp2 == res2, exp2, res2)
 
 
 if __name__ == '__main__':
     run_tests()
-    # run_real()
+    run_real()

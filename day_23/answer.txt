@@ -1,0 +1,30 @@
+--- Tests ---
+T1.0: True 92658374 92658374
+T1.1: True 67384529 67384529
+Game has been setup
+..rounds played: 0
+..rounds played: 1000000
+..rounds played: 2000000
+..rounds played: 3000000
+..rounds played: 4000000
+..rounds played: 5000000
+..rounds played: 6000000
+..rounds played: 7000000
+..rounds played: 8000000
+..rounds played: 9000000
+T2.2: True 149245887792 149245887792
+--- Day 23 p.1 ---
+True 32658947 32658947
+--- Day 23 p.2 ---
+Game has been setup
+..rounds played: 0
+..rounds played: 1000000
+..rounds played: 2000000
+..rounds played: 3000000
+..rounds played: 4000000
+..rounds played: 5000000
+..rounds played: 6000000
+..rounds played: 7000000
+..rounds played: 8000000
+..rounds played: 9000000
+True 683486010900 683486010900
