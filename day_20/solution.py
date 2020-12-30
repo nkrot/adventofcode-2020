@@ -7,10 +7,9 @@
 # 2) represent a Tile as a matrix of zeroes and ones from the very beginning.
 #
 
-import re
 import os
 import sys
-from typing import List, Tuple, Optional, Union, Set, Callable
+from typing import List, Tuple, Optional, Union, Callable
 import math
 from functools import reduce
 from collections import defaultdict
@@ -152,7 +151,7 @@ class Tile(object):
         chars = [r[idx] for r in self.rows]
         return "".join(chars)
 
-    def edge(self, side: str) -> Optional['Edge']:
+    def edge(self, side: str) -> 'Edge':
         """Return the edge of the Tile that is at the side <side>.
         Side is identified by one of the letters n, s, e or w."""
         assert side in self.SIDES, \
@@ -160,7 +159,6 @@ class Tile(object):
         for edge in self.edges:
             if edge.side == side:
                 return edge
-        return None
 
     def __str__(self):
         return "\n".join(self.rows)
@@ -280,7 +278,7 @@ class PuzzleBoard(object):
 
     def free_places(self) -> List[Position]:
         """Return a list of positions that are not occupied by a Tile."""
-        if_free = lambda pos: self[pos] is None
+        def if_free(pos): return self[pos] is None
         return self.places(if_free)
 
     def place(self, tile: Tile, pos: Position) -> Tile:
@@ -345,170 +343,227 @@ class PuzzleBoard(object):
 
 
 class TileFitter(object):
-    """TODO: this shit needs refactoring"""
+    """Iterator that will transform given tile to fit it into the given
+    position on the board."""
 
     OFFSETS = [
-        (-1, 0, "s"), (+1, 0, "n"),
-        (0, +1, "w"), (0, -1, "e")
+        (-1, 0, "n"), (+1, 0, "s"),
+        (0, +1, "e"), (0, -1, "w")
     ]
 
     OPPOSITE_SIDES = {'n': 's', 's': 'n', 'e': 'w', 'w': 'e'}
-
-    @classmethod
-    def learn(cls, deck, board):
-        debug = False
-        # group tiles by common tile edges
-        cls.EDGES = {}  # edge => List[Tile]
-        cls.TILES = defaultdict(list)  # tile.id : List[Tile]
-        for tile in deck:
-            for edge in tile.edges:
-                added = False
-                for text in [edge.value, edge.value[::-1]]:
-                    if text in cls.EDGES:
-                        cls.EDGES[text].append(tile)
-                        added = True
-                if not added:
-                    cls.EDGES.setdefault(edge.value, []).append(tile)
-        for tiles in cls.EDGES.values():
-            for i in range(len(tiles)):
-                for j in range(len(tiles)):
-                    if i != j:
-                        cls.TILES[tiles[i].id].append(tiles[j])
-        # sanity check
-        assert len(deck) == len(cls.TILES), "Unbelievable"
-        if debug:
-            print("{} learnt the following nearby tiles:".format(cls.__name__))
-            for k, vals in cls.TILES.items():
-                print(k, [t.id for t in vals])
 
     def __init__(self, board: PuzzleBoard, pos: Position, tile: Tile):
         self.board = board
         self.pos = pos
         self.tile = tile
-        self.surrounding_edges = self._collect_surrounding_edges()
+        self.transform_ = None  # the most recent transformation
+        self._set_surrounding_edges()
         self._set_transforms()
 
-    @classmethod
-    def select(cls, deck, board, pos: Position) -> List[Tile]:
-        """Select tiles from the <deck> that can potentially fit given position
-        on the board"""
-        tiles = list(deck.tiles)
-        n_neighbours = 4
-        if board.is_corner(pos):
-            n_neighbours = 2
-        elif board.is_side(pos):
-            n_neighbours = 3
-        # print(f"Require {n_neighbours} neighbours for {pos}")
-        tiles = [tile for tile in tiles
-                 if len(cls.TILES.get(tile.id, [])) == n_neighbours]
-        return tiles
-
     def _set_transforms(self):
-        self.transform_ = None  # the most recent transformation
+        """Set a list of transforms that are relevant for fitting the current
+        tile to the current position on the board.
+        """
+        if self._has_all_expected_edges():
+            # TODO: decide what transformations are actually relevant?
+            self.transforms = [
+                '_', 'r', 'r', 'r', 'rh', 'r', 'r', 'r', 'hv',
+                'r', 'r', 'r',  # 'v'
+            ]
+        else:
+            # The tile does not have expected edges
+            self.transforms = []
+
+    def _has_all_expected_edges(self):
+        """Check that the current tile has all edges that are expected based
+        on the adjacent tiles (surrounding edges).
+
+        TODO: here we can collect information on corresponding edges, that can
+        be used to determine what transforms are needed to bring the tile into
+        desired orientation.
+        """
         checks = []
-        for exp_edge in self.surrounding_edges:
-            # side = self.OPPOSITE_SIDES[exp_edge.side]
+        for side, exp_edge in self.surrounding_edges.items():
             for myedge in self.tile.edges:
                 if exp_edge == myedge or exp_edge == myedge.value[::-1]:
                     checks.append(True)
                     break
-        # TODO: Optimization: decide what transformations are relevant
-        if checks.count(True) >= len(self.surrounding_edges):
-            self.transforms = [
-                '_', 'r', 'r', 'r', 'rh', 'r', 'r', 'r', 'hv',
-                'r', 'r', 'r'  # 'v' this brings the tile into original state
-            ]
-        else:
-            self.transforms = []
+        return checks.count(True) >= len(self.surrounding_edges)
 
-    def _collect_surrounding_edges(self):
-        edges = []
-        for dh, dw, opside in self.OFFSETS:
-            h = self.pos[0] + dh
-            w = self.pos[1] + dw
-            tile = self.board[(h, w)]
+    def _set_surrounding_edges(self):
+        """Inspect the tiles that are adjacent to the current position on
+        the board in all 4 directions (n, s, w, e) and from those tiles collect
+        edges that are adjacent to the current position.
+        Something like this:
+        {
+           "n": Southern edge of the tile to the North of the current position
+           "w": Eastern edge of the tile to the West of the current position
+        }
+        """
+        self.surrounding_edges = {}
+        for dh, dw, side in self.OFFSETS:
+            pos = (self.pos[0] + dh, self.pos[1] + dw)
+            tile = self.board[pos]
             if tile:
-                edge = tile.edge(opside)
-                if edge:
-                    edges.append(edge)
+                edge = tile.edge(self.OPPOSITE_SIDES[side])
+                self.surrounding_edges[side] = edge
         # print("-- surrounding edges ---")
-        # print(edges)
-        return edges
+        # print(self.surrounding_edges)
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        """Manipulate the tile to fit to given place at the board."""
+        """Manipulate the tile to fit to given place on the board."""
         while self.transforms:
-            tr = self.transforms.pop(0)
-            self.tile.transform(tr)
-            self.transform_ = tr
+            self.transform_ = self.transforms.pop(0)
+            self.tile.transform(self.transform_)
             if self.tile_fits(self.tile):
                 return self.tile
         raise StopIteration
 
     def tile_fits(self, tile: Tile) -> bool:
-        checks = []
-        for exp_edge in self.surrounding_edges:
-            # print(f"Expected edge: {exp_edge}")
-            side = self.OPPOSITE_SIDES[exp_edge.side]
-            check = exp_edge == tile.edge(side)
-            checks.append(check)
-            if not check:
-                break
-        # print(checks)
-        return checks.count(False) == 0
-
-
-def arrange_tiles(board: PuzzleBoard, deck: Deck, level: int = 0):
-    """TODO: needs refactoring
-    """
-
-    places = board.free_places()
-    if not places:
+        """Determine if the tile fits surrounding tiles exactly."""
+        for side, exp_edge in self.surrounding_edges.items():
+            if exp_edge != tile.edge(side):
+                return False
         return True
 
-    assert len(places) == len(deck), \
-        "Deck size does not match the amount of remaining board space"
-    # print("Free places", places)
 
-    pos = places[0]
-    tiles = TileFitter.select(deck, board, pos)
+class arrange_tiles(object):
+    """ Recursive brute-force algorithm """
 
-    # print(f"Filling in place: {pos}, with {len(tiles)} candidates")
-    # reveal_deck(tiles)
+    def __init__(self, board: PuzzleBoard, deck: Deck):
+        self.board = board
+        self.deck = deck
+        self.level = 0
+        self.debug = False
 
-    found = False
-    for i, tile in enumerate(tiles):
-        deck.take(tile)
-        # print(f"..Trying for {pos} tile at={i}: {tile.id}")
-        fitter = TileFitter(board, pos, tile)
-        board.place(tile, pos)
-        for t in fitter:
-            # print(f"..Trying transform {fitter.transform_} for {tile.id}")
-            if arrange_tiles(board, deck, level+1):
-                found = True
+        self._learn()
+        self._arrange_tiles()
+
+    def _learn(self):
+        """Inspect the deck and the board and precompute some useful data:
+        * for each tile, collect a list of neighbouring tiles. This can be
+          easily determined by finding common edges.
+        """
+
+        self.tile_neighbours = defaultdict(list)  # tile.id: List[Tile]
+
+        common_edges = {}  # edge: List[Tile]
+        for tile in self.deck:
+            for edge in tile.edges:
+                added = False
+                for text in [edge.value, edge.value[::-1]]:
+                    if text in common_edges:
+                        common_edges[text].append(tile)
+                        added = True
+                if not added:
+                    common_edges.setdefault(edge.value, []).append(tile)
+        for tiles in common_edges.values():
+            for i in range(len(tiles)):
+                for j in range(len(tiles)):
+                    if i != j:
+                        self.tile_neighbours[tiles[i].id].append(tiles[j])
+
+        assert len(self.deck) == len(self.tile_neighbours), "Unbelievable"
+
+        if self.debug:
+            print("{} learnt the following nearby tiles:".format(
+                self.__class__.__name__))
+            for k, vals in self.tile_neighbours.items():
+                print(k, [t.id for t in vals])
+
+    def _select_candidate_tiles(self, pos: Position) -> List[Tile]:
+        """Select tiles from the deck that can fit given position <pos> on the
+        board given the following heuristics:
+        * for every position on the board we know how many tiles can be around:
+          - a tile in the board corner can only have 2 neighbouring tiles,
+          - a tile along the side of the board can have 3 neighbouring tiles,
+          - otherwise a tile can have 4 neighbouring tiles.
+        * for all tiles in the deck we have precomputed a list of neighbouring
+          tiles. see self._learn() method.
+        """
+        n_neighbours = 4
+        if self.board.is_corner(pos):
+            n_neighbours = 2
+        elif self.board.is_side(pos):
+            n_neighbours = 3
+        return filter(lambda t: len(self._neighbours(t) or []) == n_neighbours,
+                      self.deck)
+
+    def _neighbours(self, tile: Union[Tile, int]) -> List[int]:
+        if isinstance(tile, Tile):
+            tile = tile.id
+        return self.tile_neighbours.get(tile, None)
+
+    def _turn(self, tile: Tile, pos: Position):
+        return TileFitter(self.board, pos, tile)
+
+    def _arrange_tiles(self):
+        """
+        Arrange remaining tiles from the deck into free places on the board.
+
+        Algorithm
+        ---------
+        * pick the 1st unoccupied place on the board.
+        * place a tile on that spot on the board.
+        * recursive (with reduced deck and board)
+        """
+
+        self.level += 1
+
+        places = self.board.free_places()
+        # print("Free places", places)
+
+        if not places:
+            self.level -= 1
+            return True
+
+        assert len(places) == len(self.deck), \
+          "Deck size does not match the amount of remaining board space"
+
+        pos = places[0]
+        tiles = self._select_candidate_tiles(pos)
+
+        # print(f"Filling in place: {pos}, with {len(tiles)} candidates")
+        # reveal_deck(tiles)
+
+        found = False
+        for i, tile in enumerate(tiles):
+            self.deck.take(tile)
+            self.board.place(tile, pos)
+            # print(f"..Trying for {pos} tile at={i}: {tile.id}")
+
+            for t in self._turn(tile, pos):
+                if self._arrange_tiles():
+                    found = True
+                    break
+
+            if found:
+                # we found that the current tile matches the current spot on
+                # the board. No need to do anything else for the current spot.
                 break
-        if found:
-            break
-        else:
-            _tile = board.take(pos)
-            assert tile == _tile, "Oh shit"
-            deck.add(tile)
-            # print(f"..No fit for {pos} with {tile.id}")
+            else:
+                # the current tile does not match the current spot: we remove
+                # the tile from the board and put it back into the deck.
+                # print(f"..No fit for {pos} with {tile.id}")
+                self.board.take(pos)
+                self.deck.add(tile)
 
-    # if not found:
-    #     print(f"..No fit for {pos} with any tile. Go to previous step")
+        # if not found:
+        #     print(f"..No fit for {pos} with any tile. Go to previous step")
 
-    if level == 0 and DEBUG:
-        print("--- resulting deck ---")
-        reveal_deck(deck)
-        print("--- resulting board --=")
-        # print(board.cells)
-        print(board)
+        if self.level == 1 and self.debug:
+            print("--- resulting deck ---")
+            reveal_deck(self.deck)
+            print("--- resulting board --=")
+            print(self.board)
 
-    return found
+        self.level -= 1
+
+        return found
 
 
 def solve_p1(lines: List[str], do_part=1) -> Union[int, PuzzleBoard]:
@@ -520,12 +575,11 @@ def solve_p1(lines: List[str], do_part=1) -> Union[int, PuzzleBoard]:
     # return 0
 
     h = int(math.sqrt(len(deck)))
-    size  = (h, h)
+    size = (h, h)
     assert size[0] * size[1] == len(deck), \
         f"Expecting a square arrangement but {len(deck)} does not fit into {size}"
-    board = PuzzleBoard(size)
 
-    TileFitter.learn(deck, board)
+    board = PuzzleBoard(size)
 
     # demo_fill_board_sequentially(board, deck)
     # demo_fill_board_randomly(board, deck)
@@ -666,7 +720,7 @@ def detect_monsters(sea: Tile, monster: Tile) -> List[Position]:
     """
     # TODO
     # At this point, for optimization purposes, it would be better to have
-    # the Sea and the Monster represented as a matrix of zeroes an ones.
+    # the Sea and the Monster represented as a matrix of zeroes and ones.
     monsters = set()
     for _ in range(2):
         for topleft, tile in scan(sea, monster.size):
@@ -689,7 +743,7 @@ def solve_p2(lines: List[str]) -> int:
     for pos in board.places():
         tile = board[pos]
         h, w = tile.size
-        t = tile.crop((1,1), h-2, w-2)
+        t = tile.crop((1, 1), h-2, w-2)
         t.id = tile.id
         sea.place(t, pos)
 
@@ -752,7 +806,7 @@ def run_tests():
 
 
 def run_real():
-    day = '20'  # TODO
+    day = '20'
     lines = utils.load_input()
 
     print(f"--- Day {day} p.1 ---")
