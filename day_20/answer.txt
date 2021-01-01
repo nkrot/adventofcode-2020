@@ -1,7 +1,11 @@
 --- Tests ---
+Total number of transforms applied to Tiles: 22
 T1.0: True 20899048083289 20899048083289
+Total number of transforms applied to Tiles: 22
 T2.0: True 273 273
 --- Day 20 p.1 ---
+Total number of transforms applied to Tiles: 572
 True 83775126454273 83775126454273
 --- Day 20 p.2 ---
+Total number of transforms applied to Tiles: 572
 True 1993 1993

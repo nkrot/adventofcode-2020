@@ -5,7 +5,8 @@
 # TODO
 # 1) use numpy for Tile, Edge, PuzzleBoard
 # 2) represent a Tile as a matrix of zeroes and ones from the very beginning.
-#
+# 3) there are some TODOs scattered over the script.
+#    Those in _arrange_tiles() can be interesting to implement.
 
 import os
 import sys
@@ -41,6 +42,25 @@ class Tile(object):
         """concatenate two tiles side by side with given separator"""
         rows = [sep.join(rs) for rs in zip(tile1.rows, tile2.rows)]
         return cls(rows)
+
+    @classmethod
+    def clockwise_distance(cls, a: str, b: str) -> int:
+        """
+        How many cloclwise rotation steps between side <a> and <b>.
+        For example:
+        * s, s --> 0
+        * s, w --> 1
+        * s, n --> 2
+        * s, e --> 3
+        """
+        assert a in cls.SIDES, \
+            f"Invalid side spec: {a}. Must be one of {cls.SIDES}"
+        assert b in cls.SIDES, \
+            f"Invalid side spec: {b}. Must be one of {cls.SIDES}"
+        stops = list(cls.SIDES * 2)
+        ai = stops.index(a)
+        bi = stops.index(b, ai)
+        return bi - ai
 
     def __init__(self, rows: List[str], id=None):
         self.id = id
@@ -187,6 +207,23 @@ class Tile(object):
             if isinstance(other, type(self)):
                 other = other.value
             return self.value == other
+
+        def compute_transform_to(self, other: 'Edge') -> str:
+            """Compute a transform (in terms of `Tile.transform()`) that will
+            convert the current Edge to given <other> Edge.
+            """
+            trn, flips = None, None
+            if other == self:
+                flips = ['', '', 'h', 'v']
+            elif other == self.value[::-1]:
+                flips = ['h', 'v', '', '']
+            if flips:
+                if self.side in 'we':
+                    flips.append(flips.pop(0))
+                n_steps = Tile.clockwise_distance(self.side, other.side)
+                trn = 'r' * n_steps + flips[n_steps]
+                trn = trn or '_'   # to have _ instead of ''
+            return trn
 
 
 class Deck(object):
@@ -353,10 +390,21 @@ class TileFitter(object):
 
     OPPOSITE_SIDES = {'n': 's', 's': 'n', 'e': 'w', 'w': 'e'}
 
+    TRANSFORMS = [
+        '_', 'r', 'r', 'r', 'rh', 'r', 'r', 'r', 'hv', 'r', 'r', 'r',  # 'v'
+    ]
+
+    NUM_TRANSFORMS = 0
+
+    @classmethod
+    def count_transforms(cls):
+        cls.NUM_TRANSFORMS += 1
+
     def __init__(self, board: PuzzleBoard, pos: Position, tile: Tile):
         self.board = board
         self.pos = pos
         self.tile = tile
+        self.debug = False
         self.transform_ = None  # the most recent transformation
         self._set_surrounding_edges()
         self._set_transforms()
@@ -366,11 +414,25 @@ class TileFitter(object):
         tile to the current position on the board.
         """
         if self._has_all_expected_edges():
-            # TODO: decide what transformations are actually relevant?
-            self.transforms = [
-                '_', 'r', 'r', 'r', 'rh', 'r', 'r', 'r', 'hv',
-                'r', 'r', 'r',  # 'v'
-            ]
+            self.transforms = list(self.TRANSFORMS)
+
+            # Decide what transformations are actually relevant and place them
+            # at the beginning of the list of transforms.
+            # NOTE: we still want to use the whole list of transforms to cover
+            # our asses in case our suggested transform(s) is/are incorrect.
+            # After extensive testing of the algorithm for suggesting
+            # transforms, default transforms can be removed.
+
+            # For now we handle the simplest case only:
+            # Pick the first suggested transform that is common to all edges.
+            transforms = defaultdict(int)
+            for _, edges in self.matching_edges.items():
+                for edge in edges:
+                    trn = edge[1]
+                    transforms[trn] += 1
+            for trn, count in transforms.items():
+                if count == len(self.matching_edges):
+                    self.transforms[0] = trn
         else:
             # The tile does not have expected edges
             self.transforms = []
@@ -379,17 +441,31 @@ class TileFitter(object):
         """Check that the current tile has all edges that are expected based
         on the adjacent tiles (surrounding edges).
 
-        TODO: here we can collect information on corresponding edges, that can
+        Additionally, collect information on corresponding edges, that can
         be used to determine what transforms are needed to bring the tile into
         desired orientation.
         """
-        checks = []
-        for side, exp_edge in self.surrounding_edges.items():
+        self.matching_edges = defaultdict(list)
+        for side, surr_edge in self.surrounding_edges.items():
+            exp_edge = Tile.Edge(surr_edge.value, side)
+            # For every edge of the current tile, suggest a transform
+            # to convert the edge to corresponding surrounding edge.
             for myedge in self.tile.edges:
-                if exp_edge == myedge or exp_edge == myedge.value[::-1]:
-                    checks.append(True)
-                    break
-        return checks.count(True) >= len(self.surrounding_edges)
+                trn = myedge.compute_transform_to(exp_edge)
+                if trn:
+                    self.matching_edges[side].append((myedge, trn))
+
+        ok = len(self.matching_edges) >= len(self.surrounding_edges)
+
+        if ok and self.debug:
+            print("--- Surrounding/matching edges ---")
+            for side, exp_edge in self.surrounding_edges.items():
+                print(f"Side: {side}")
+                print("..Expected:\t", self.surrounding_edges[side])
+                print("..Candidates:\t", self.matching_edges[side])
+            print("--- END ---")
+
+        return ok
 
     def _set_surrounding_edges(self):
         """Inspect the tiles that are adjacent to the current position on
@@ -418,18 +494,26 @@ class TileFitter(object):
         """Manipulate the tile to fit to given place on the board."""
         while self.transforms:
             self.transform_ = self.transforms.pop(0)
+            self._verbose(f"applying {self.transform_} to {self.tile.id}")
             self.tile.transform(self.transform_)
+            self.count_transforms()
             if self.tile_fits(self.tile):
                 return self.tile
         raise StopIteration
 
     def tile_fits(self, tile: Tile) -> bool:
         """Determine if the tile fits surrounding tiles exactly."""
+        res = True
         for side, exp_edge in self.surrounding_edges.items():
             if exp_edge != tile.edge(side):
-                return False
-        return True
+                res = False
+                break
+        self._verbose(f"Tile fits -- {res}")
+        return res
 
+    def _verbose(self, msg):
+        if self.debug:
+            print(msg)
 
 class arrange_tiles(object):
     """ Recursive brute-force algorithm """
@@ -441,6 +525,8 @@ class arrange_tiles(object):
         self.debug = False
 
         self._learn()
+
+        TileFitter.NUM_TRANSFORMS = 0  # for dev purposes
         self._arrange_tiles()
 
     def _learn(self):
@@ -490,8 +576,12 @@ class arrange_tiles(object):
             n_neighbours = 2
         elif self.board.is_side(pos):
             n_neighbours = 3
-        return filter(lambda t: len(self._neighbours(t) or []) == n_neighbours,
-                      self.deck)
+        # NOTE: filter with lambda turned out to be not a good idea, because
+        # it did not create an inmutable list. Instead, it produced something
+        # that had duplicates, probably coming from changed underlying deck.
+        tiles = [tile for tile in self.deck
+                 if len(self._neighbours(tile) or []) == n_neighbours]
+        return tiles
 
     def _neighbours(self, tile: Union[Tile, int]) -> List[int]:
         if isinstance(tile, Tile):
@@ -507,14 +597,53 @@ class arrange_tiles(object):
 
         Algorithm
         ---------
-        * pick the 1st unoccupied place on the board.
-        * place a tile on that spot on the board.
-        * recursive (with reduced deck and board)
+        * pick the 1st unoccupied place on the board (see Filling Order).
+        * place a tile on that place on the board.
+        * recursive (with reduced deck and partially filled board)
+
+        Filling Order
+        --------------
+        By diagonals, that is
+        1) fill (0,0);
+        2) fill spots adjacent to (0,0) -- (0,1) and (1,0);
+        3) fill adjacent to (0,1) and to (1,0) -- (0,2), (1,1), (2,0)
+        4) and so on
+
+        It seems that filling by diagonals requires less attemps to fill
+        the whole board than filling by rows. TODO: prove it?
+        A problem when filling by rows:
+        when the 0th row -- (0, 0)...(0, last) -- is filled and we fail to fill
+        the place (1,0), the problem is in the tile at (0, 0) rather than in
+        the tile at (0,last), hence we should invalidate the *whole* 0th row.
+        Honestly, filling by diagonals shows the same issue.
+        TODO: this can be improved by passing up from the recursive calls
+        information about the place on the board that caused the problem:
+        we keep returning from the recursive calls until we are back to that
+        place where that place on the board is handled.
+
+        TODO:
+        the very first tile should be placed on the board in the orientation
+        that leaves both edges common with other tiles facing inside the board.
+        However, filling by diagonal helps to accomplish it by detecting wrong
+        filling of (0,0) very early.
         """
 
         self.level += 1
 
-        places = self.board.free_places()
+        def by_diagonal(pos: Position):
+            """
+            Examples:
+            (0, 0) -> (0, 0, 0)
+            (0, 2) -> (2, 0, 2)
+            (1, 1) -> (2, 1, 1)
+            (2, 0) -> (2, 2, 0)
+            (0, 3) -> (3, 0, 3)
+            If this collection is sorted, the order will be like this:
+            [(0, 0),    (0, 2), (1, 1), (2, 0),    (0, 3)]
+            """
+            return [sum(pos)] + list(pos)
+
+        places = sorted(self.board.free_places(), key=by_diagonal)
         # print("Free places", places)
 
         if not places:
@@ -534,7 +663,9 @@ class arrange_tiles(object):
         for i, tile in enumerate(tiles):
             self.deck.take(tile)
             self.board.place(tile, pos)
-            # print(f"..Trying for {pos} tile at={i}: {tile.id}")
+
+            # print("..Trying for {} the tile #{}: {} (level={})".format(
+            #         pos, i, tile.id, self.level))
 
             for t in self._turn(tile, pos):
                 if self._arrange_tiles():
@@ -560,6 +691,10 @@ class arrange_tiles(object):
             reveal_deck(self.deck)
             print("--- resulting board --=")
             print(self.board)
+
+        if self.level == 1:
+            print("Total number of transforms applied to Tiles: {}".format(
+                TileFitter.NUM_TRANSFORMS))
 
         self.level -= 1
 
